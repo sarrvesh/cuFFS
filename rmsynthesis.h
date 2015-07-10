@@ -16,4 +16,5 @@ struct optionsList{
 };
 
 /* Function definitions */
+void printVersion(void);
 int getInputs(char *parsetFileName, struct optionsList *inOptions);

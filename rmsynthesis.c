@@ -1,10 +1,16 @@
 /******************************************************************************
-rmsynthesis.c : GPU Based implementation of RM Synthesis
+
+A GPU Based implementation of RM Synthesis
 
 Version: 0.1
 Last edited: July 11, 2015
 ******************************************************************************/
 #include"rmsynthesis.h"
+
+void printVersion(void) {
+    printf("\nRM Synthesis v%s", VERSION_STR);
+    printf("\nWritten by Sarrvesh S. Sridhar\n");
+}
 
 int getInputs(char *parsetFileName, struct optionsList *inOptions) {
     FILE *fParset;
@@ -20,8 +26,7 @@ int main(int argc, char *argv[])  {
     struct optionsList inOptions;
     int status;
     
-    printf("\nRM Synthesis v%s", VERSION_STR);
-    printf("\nWritten by Sarrvesh S. Sridhar\n");
+    printVersion();
     
     /* Verify command line input */
     if(argc!=2) {
