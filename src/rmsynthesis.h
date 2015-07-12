@@ -19,7 +19,7 @@
 
 /* Structure to store the input options */
 struct optionsList {
-    const char *qCubeName;
+    char *qCubeName;
     char *uCubeName;
     char *freqFileName;
     char *outPrefix;
