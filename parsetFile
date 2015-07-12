@@ -1,0 +1,12 @@
+// Define how fits files are stored on disk
+qCubeName = "testFiles/M101_Q.fits";
+uCubeName = "testFiles/M101_U.fits";
+freqFileName = "testFiles/freqTable";
+
+// Define the faraday depth axis. All units in rad/m/m
+phiMin = -1000.;
+nPhi = 200; // integer
+dPhi = 10.;
+
+// Prefix for output filenames
+outPrefix = "trial1";
