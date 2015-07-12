@@ -183,7 +183,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
 *************************************************************/
 void generateRMSF(struct optionsList *inOptions, struct parList *params) {
     int i, j;
-    int K;
+    double K;
     
     params->rmsf     = calloc(inOptions->nPhi, sizeof(params->rmsf));
     params->rmsfReal = calloc(inOptions->nPhi, sizeof(params->rmsfReal));
@@ -191,11 +191,13 @@ void generateRMSF(struct optionsList *inOptions, struct parList *params) {
     params->phiAxis  = calloc(inOptions->nPhi, sizeof(params->phiAxis));
     
     /* Get the normalization factor K */
-    K = 1 / params->qAxisLen3;
+    K = 1.0 / params->qAxisLen3;
     
     /* First generate the phi axis */
     for(i=0; i<inOptions->nPhi; i++) {
         params->phiAxis[i] = inOptions->phiMin + i * inOptions->dPhi;
+        
+        /* For each phi value, compute the corresponding RMSF */
         for(j=0; j<params->qAxisLen3; j++) {
             params->rmsfReal[i] += cos(2 * params->phiAxis[i] *
                                    (params->lambda2[j] - params->lambda20 ));
@@ -203,8 +205,8 @@ void generateRMSF(struct optionsList *inOptions, struct parList *params) {
                                    (params->lambda2[j] - params->lambda20 ));
         }
         // Normalize with K
-        params->rmsfReal[i] /= K;
-        params->rmsfImag[i] /= K;
+        params->rmsfReal[i] *= K;
+        params->rmsfImag[i] *= K;
         params->rmsf[i] = sqrt( params->rmsfReal[i] * params->rmsfReal[i] +
                                 params->rmsfImag[i] * params->rmsfImag[i] );
     }
