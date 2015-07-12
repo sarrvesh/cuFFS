@@ -153,6 +153,10 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     double tempDouble;
     
     params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
+    if(params->freqList == NULL) {
+        printf("Error: Mem alloc failed while reading in frequency list");
+        return(FAILURE);
+    }
     for(i=0; i<params->qAxisLen3; i++) {
         fscanf(params->freq, "%lf", &params->freqList[i]);
         if(feof(params->freq)) {
@@ -168,6 +172,10 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     
     /* Compute \lambda^2 from the list of generated frequencies */
     params->lambda2  = calloc(params->qAxisLen3, sizeof(params->lambda2));
+    if(params->lambda2 == NULL) {
+        printf("Error: Mem alloc failed while reading in frequency list");
+        return(FAILURE);
+    }
     params->lambda20 = 0.0;
     for(i=0; i<params->qAxisLen3; i++)
         params->lambda2[i] = (LIGHTSPEED / params->freqList[i]) * 
@@ -181,7 +189,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
 * Read the list of frequencies from the input freq file
 *
 *************************************************************/
-void generateRMSF(struct optionsList *inOptions, struct parList *params) {
+int generateRMSF(struct optionsList *inOptions, struct parList *params) {
     int i, j;
     double K;
     
@@ -189,6 +197,10 @@ void generateRMSF(struct optionsList *inOptions, struct parList *params) {
     params->rmsfReal = calloc(inOptions->nPhi, sizeof(params->rmsfReal));
     params->rmsfImag = calloc(inOptions->nPhi, sizeof(params->rmsfImag));
     params->phiAxis  = calloc(inOptions->nPhi, sizeof(params->phiAxis));
+    
+    if(params->rmsf     == NULL || params->rmsfReal == NULL ||
+       params->rmsfImag == NULL || params->phiAxis  == NULL)
+        return(FAILURE);
     
     /* Get the normalization factor K */
     K = 1.0 / params->qAxisLen3;
@@ -210,6 +222,7 @@ void generateRMSF(struct optionsList *inOptions, struct parList *params) {
         params->rmsf[i] = sqrt( params->rmsfReal[i] * params->rmsfReal[i] +
                                 params->rmsfImag[i] * params->rmsfImag[i] );
     }
+    return(SUCCESS);
 }
 
 /*************************************************************
@@ -246,7 +259,7 @@ void getMedianLambda20(struct parList *params) {
 * Write RMSF to disk
 *
 *************************************************************/
-void writeRMSF(struct optionsList inOptions, struct parList params) {
+int writeRMSF(struct optionsList inOptions, struct parList params) {
     FILE *rmsf;
     char filename[FILENAME_LEN];
     int i;
@@ -255,12 +268,15 @@ void writeRMSF(struct optionsList inOptions, struct parList params) {
     sprintf(filename, "%srmsf.txt", inOptions.outPrefix);
     printf("\nINFO: Writing RMSF to %s", filename);
     rmsf = fopen(filename, FILE_READWRITE);
+    if(rmsf == NULL)
+        return(FAILURE);
     
     for(i=0; i<inOptions.nPhi; i++)
         fprintf(rmsf, "%lf\t%lf\t%lf\t%lf\n", params.phiAxis[i], params.rmsfReal[i],
                 params.rmsfImag[i], params.rmsf[i]);
     
     fclose(rmsf);
+    return(SUCCESS);
 }
 
 /*************************************************************
@@ -331,11 +347,17 @@ int main(int argc, char *argv[]) {
     getMedianLambda20(&params);
     
     /* Generate RMSF */
-    generateRMSF(&inOptions, &params);
+    if(generateRMSF(&inOptions, &params)) {
+        printf("\nError: Mem alloc failed while generating RMSF");
+        exit(FAILURE);
+    }
     
     /* Write RMSF to disk */
-    writeRMSF(inOptions, params);
+    if(writeRMSF(inOptions, params)) {
+        printf("\nError: Unable to write RMSF to disk\n\n");
+        exit(FAILURE);
+    }
 
-    printf("\n");
+    printf("\n\n");
     return(SUCCESS);
 }
