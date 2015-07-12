@@ -95,7 +95,7 @@ struct optionsList parseInput(char *parsetFileName) {
     }
     
     config_destroy(&cfg);
-    return inOptions;
+    return(inOptions);
 }
 
 /*************************************************************
@@ -284,7 +284,7 @@ int writeRMSF(struct optionsList inOptions, struct parList params) {
 * Read in the stokes-Q and -U images 
 *
 *************************************************************/
-void getImageData(struct optionsList *inOptions, struct parList *params) {
+int getImageData(struct optionsList *inOptions, struct parList *params) {
     long *fPixel;
     int i;
     LONGLONG nElements;
@@ -301,11 +301,14 @@ void getImageData(struct optionsList *inOptions, struct parList *params) {
     params->uImageArray = calloc(nElements, sizeof(params->uImageArray));
     
     /* Read pixel values */
-    printf("\nINFO: Reading in Stokes Q image");
     fits_read_pix(params->qFile, TDOUBLE, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
-    printf("\nINFO: Reading in Stokes U image");
     fits_read_pix(params->uFile, TDOUBLE, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
-    fits_report_error(stdout, status);
+    if(status) {
+        printf("\nError: Unable to read fits files. Terminating with message\n");
+        fits_report_error(stdout, status);
+        return(FAILURE);
+    }
+    return(SUCCESS);
 }
 
 /*************************************************************
@@ -389,7 +392,9 @@ int main(int argc, char *argv[]) {
     }
     
     /* Read image planes from the Q and U cubes */
-    getImageData(&inOptions, &params);
+    printf("\nINFO: Reading in FITS images");
+    if(getImageData(&inOptions, &params))
+        return(FAILURE);
 
     printf("\n\n");
     return(SUCCESS);
