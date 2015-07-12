@@ -281,6 +281,35 @@ int writeRMSF(struct optionsList inOptions, struct parList params) {
 
 /*************************************************************
 *
+* Read in the stokes-Q and -U images 
+*
+*************************************************************/
+void getImageData(struct optionsList *inOptions, struct parList *params) {
+    long *fPixel;
+    int i;
+    LONGLONG nElements;
+    int status = SUCCESS;
+    
+    /* Set the starting pixel to read from the FITS file */
+    fPixel = calloc(params->qAxisNum, sizeof(fPixel));
+    for(i=1; i<=params->qAxisNum; i++)
+        fPixel[i-1] = 1;
+    
+    /* Allocate memory to store the Q and U image arrays */
+    nElements = params->qAxisLen1 * params->qAxisLen2 * params->qAxisLen3;
+    params->qImageArray = calloc(nElements, sizeof(params->qImageArray));
+    params->uImageArray = calloc(nElements, sizeof(params->uImageArray));
+    
+    /* Read pixel values */
+    printf("\nINFO: Reading in Stokes Q image");
+    fits_read_pix(params->qFile, TDOUBLE, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
+    printf("\nINFO: Reading in Stokes U image");
+    fits_read_pix(params->uFile, TDOUBLE, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
+    fits_report_error(stdout, status);
+}
+
+/*************************************************************
+*
 * Main code
 *
 *************************************************************/
@@ -299,12 +328,12 @@ int main(int argc, char *argv[]) {
     if(argc!=2) {
         printf("\nERROR: Invalid command line input. Terminating Execution!");
         printf("\nUsage: %s <parset filename>\n\n", argv[0]);
-        exit(FAILURE);
+        return(FAILURE);
     } 
     if(strcmp(parsetFileName, "-h") == 0) {
         /* Print help and exit */
         printf("\nUsage: %s <parset filename>\n\n", argv[0]);
-        exit(SUCCESS);
+        return(SUCCESS);
     }
     
     /* Parse the input file */
@@ -328,7 +357,7 @@ int main(int argc, char *argv[]) {
     params.freq = fopen(inOptions.freqFileName, FILE_READONLY);
     if(params.freq == NULL) {
         printf("\nError: Unable to open the frequency file\n\n");
-        exit(FAILURE);
+        return(FAILURE);
     }
     
     /* Gather information from fits header */
@@ -336,27 +365,31 @@ int main(int argc, char *argv[]) {
     if(status) {
         printf("\n\nQuiting with error msg:\n");
         fits_report_error(stdout, status);
-        exit(FAILURE);
+        return(FAILURE);
     }
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params))
-        exit(FAILURE);
+        return(FAILURE);
     
     /* Find median lambda20 */
     getMedianLambda20(&params);
     
     /* Generate RMSF */
+    printf("\nINFO: Computing RMSF");
     if(generateRMSF(&inOptions, &params)) {
         printf("\nError: Mem alloc failed while generating RMSF");
-        exit(FAILURE);
+        return(FAILURE);
     }
     
     /* Write RMSF to disk */
     if(writeRMSF(inOptions, params)) {
         printf("\nError: Unable to write RMSF to disk\n\n");
-        exit(FAILURE);
+        return(FAILURE);
     }
+    
+    /* Read image planes from the Q and U cubes */
+    getImageData(&inOptions, &params);
 
     printf("\n\n");
     return(SUCCESS);

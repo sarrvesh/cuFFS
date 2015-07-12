@@ -43,4 +43,6 @@ struct parList {
     
     double *phiAxis;
     double *rmsf, *rmsfReal, *rmsfImag;
+    
+    double *qImageArray, *uImageArray;
 };
