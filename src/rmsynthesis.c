@@ -201,7 +201,7 @@ void generateRMSF(struct optionsList *inOptions, struct parList *params) {
         for(j=0; j<params->qAxisLen3; j++) {
             params->rmsfReal[i] += cos(2 * params->phiAxis[i] *
                                    (params->lambda2[j] - params->lambda20 ));
-            params->rmsfImag[i] += sin(2 * params->phiAxis[i] *
+            params->rmsfImag[i] -= sin(2 * params->phiAxis[i] *
                                    (params->lambda2[j] - params->lambda20 ));
         }
         // Normalize with K
