@@ -10,6 +10,7 @@
 #define FAILURE 1
 
 #define FILENAME_LEN        256
+#define STRING_BUF_LEN      256
 #define DEFAULT_OUT_PREFIX  "output_"
 #define SCREEN_WIDTH        40
 #define FILE_READONLY       "r"

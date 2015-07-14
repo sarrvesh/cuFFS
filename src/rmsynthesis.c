@@ -279,6 +279,37 @@ int writeRMSF(struct optionsList inOptions, struct parList params) {
     return(SUCCESS);
 }
 
+#ifdef GNUPLOT_ENABLE
+/*************************************************************
+*
+* Plot RMSF
+*
+*************************************************************/
+int plotRMSF(struct optionsList inOptions) {
+    FILE *gnuplotPipe;
+    char commands[STRING_BUF_LEN];
+    
+    gnuplotPipe = popen("gnuplot -p", FILE_READWRITE);
+    if(gnuplotPipe == NULL)
+        return(FAILURE);
+    
+    /* Plot the RMSF using the file that was written in writeRMSF() */
+    sprintf(commands, "set title \"Rotation Measure Spread Function\"\n");
+    sprintf(commands, "%sset xlabel \"Faraday Depth\"\n", commands);
+    sprintf(commands, "%sset autoscale\n", commands);
+    sprintf(commands, "%splot \"%srmsf.txt\" using 1:2 title 'RMSF' with lines,", 
+            commands, inOptions.outPrefix);
+    sprintf(commands, "%s \"%srmsf.txt\" using 1:3 title 'Real' with lines,", 
+            commands, inOptions.outPrefix);
+    sprintf(commands, "%s \"%srmsf.txt\" using 1:4 title 'Imag' with lines\n", 
+            commands, inOptions.outPrefix);
+    fprintf(gnuplotPipe, "%s", commands);
+    pclose(gnuplotPipe);
+    
+    return(SUCCESS);
+}
+#endif
+
 /*************************************************************
 *
 * Read in the stokes-Q and -U images 
@@ -382,13 +413,20 @@ int main(int argc, char *argv[]) {
     if(generateRMSF(&inOptions, &params)) {
         printf("\nError: Mem alloc failed while generating RMSF");
         return(FAILURE);
-    }
-    
+    }    
     /* Write RMSF to disk */
     if(writeRMSF(inOptions, params)) {
         printf("\nError: Unable to write RMSF to disk\n\n");
         return(FAILURE);
     }
+    /* Plot RMSF */
+    #ifdef GNUPLOT_ENABLE
+    printf("\nINFO: Plotting RMSF with gnuplot");
+    if(plotRMSF(inOptions)) {
+        printf("\nError: Unable to plot RMSF\n\n");
+        return(FAILURE);
+    }
+    #endif
     
     /* Read image planes from the Q and U cubes */
     printf("\nINFO: Reading in FITS images");
