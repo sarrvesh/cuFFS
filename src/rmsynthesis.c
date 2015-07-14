@@ -154,7 +154,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     
     params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
     if(params->freqList == NULL) {
-        printf("Error: Mem alloc failed while reading in frequency list");
+        printf("\nError: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     for(i=0; i<params->qAxisLen3; i++) {
@@ -173,7 +173,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     /* Compute \lambda^2 from the list of generated frequencies */
     params->lambda2  = calloc(params->qAxisLen3, sizeof(params->lambda2));
     if(params->lambda2 == NULL) {
-        printf("Error: Mem alloc failed while reading in frequency list");
+        printf("\nError: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     params->lambda20 = 0.0;
@@ -303,8 +303,9 @@ int getImageData(struct optionsList *inOptions, struct parList *params) {
     /* Read pixel values */
     fits_read_pix(params->qFile, TDOUBLE, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
     fits_read_pix(params->uFile, TDOUBLE, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
+    fits_close_file(params->qFile, &status);
+    fits_close_file(params->uFile, &status);
     if(status) {
-        printf("\nError: Unable to read fits files. Terminating with message\n");
         fits_report_error(stdout, status);
         return(FAILURE);
     }
@@ -353,9 +354,8 @@ int main(int argc, char *argv[]) {
     fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
     fits_open_file(&params.uFile, inOptions.uCubeName, READONLY, &fitsStatus);
     if(fitsStatus != SUCCESS) {
-        printf("\nError: Unable to read the fits files. ");
-        printf("\n\nError msg:");
         fits_report_error(stdout, fitsStatus);
+        return(fitsStatus);
     }
     params.freq = fopen(inOptions.freqFileName, FILE_READONLY);
     if(params.freq == NULL) {
@@ -366,7 +366,6 @@ int main(int argc, char *argv[]) {
     /* Gather information from fits header */
     status = getFitsHeader(&inOptions, &params);
     if(status) {
-        printf("\n\nQuiting with error msg:\n");
         fits_report_error(stdout, status);
         return(FAILURE);
     }
