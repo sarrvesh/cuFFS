@@ -37,12 +37,12 @@ struct parList {
     int qAxisLen1, qAxisLen2, qAxisLen3;
     int uAxisLen1, uAxisLen2, uAxisLen3;
     
-    double *freqList;
-    double *lambda2;
-    double lambda20;
+    float *freqList;
+    float *lambda2;
+    float lambda20;
     
-    double *phiAxis;
-    double *rmsf, *rmsfReal, *rmsfImag;
+    float *phiAxis;
+    float *rmsf, *rmsfReal, *rmsfImag;
     
-    double *qImageArray, *uImageArray;
+    float *qImageArray, *uImageArray;
 };

@@ -112,7 +112,7 @@ void printOptions(struct optionsList inOptions) {
     printf("\nQ Cube: %s", inOptions.qCubeName);
     printf("\nU Cube: %s", inOptions.uCubeName);
     printf("\n");
-    printf("\nphi min: %.2lf", inOptions.phiMin);
+    printf("\nphi min: %.2f", inOptions.phiMin);
     printf("\n# of phi planes: %d", inOptions.nPhi);
     printf("\ndelta phi: %.2lf", inOptions.dPhi);
     printf("\n\n");
@@ -150,7 +150,7 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
 *************************************************************/
 int getFreqList(struct optionsList *inOptions, struct parList *params) {
     int i;
-    double tempDouble;
+    float tempFloat;
     
     params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
     if(params->freqList == NULL) {
@@ -158,13 +158,13 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
         return(FAILURE);
     }
     for(i=0; i<params->qAxisLen3; i++) {
-        fscanf(params->freq, "%lf", &params->freqList[i]);
+        fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
             printf("\nError: Less frequency values present than fits frames\n\n");
             return(FAILURE);
         }
     }
-    fscanf(params->freq, "%lf", &tempDouble);
+    fscanf(params->freq, "%f", &tempFloat);
     if(! feof(params->freq)) {
         printf("\nError: More frequency values present than fits frames\n\n");
         return(FAILURE);
@@ -272,7 +272,7 @@ int writeRMSF(struct optionsList inOptions, struct parList params) {
         return(FAILURE);
     
     for(i=0; i<inOptions.nPhi; i++)
-        fprintf(rmsf, "%lf\t%lf\t%lf\t%lf\n", params.phiAxis[i], params.rmsfReal[i],
+        fprintf(rmsf, "%f\t%f\t%f\t%f\n", params.phiAxis[i], params.rmsfReal[i],
                 params.rmsfImag[i], params.rmsf[i]);
     
     fclose(rmsf);
@@ -301,8 +301,8 @@ int getImageData(struct optionsList *inOptions, struct parList *params) {
     params->uImageArray = calloc(nElements, sizeof(params->uImageArray));
     
     /* Read pixel values */
-    fits_read_pix(params->qFile, TDOUBLE, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
-    fits_read_pix(params->uFile, TDOUBLE, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
+    fits_read_pix(params->qFile, TFLOAT, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
+    fits_read_pix(params->uFile, TFLOAT, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
     fits_close_file(params->qFile, &status);
     fits_close_file(params->uFile, &status);
     if(status) {
