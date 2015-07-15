@@ -345,6 +345,54 @@ int getImageData(struct optionsList *inOptions, struct parList *params) {
 
 /*************************************************************
 *
+* Check for valid CUDA supported devices. If detected, 
+*  print useful device information
+*
+*************************************************************/
+struct deviceInfoList * getDeviceInformation(int *nDevices) {
+    int dev;
+    cudaError_t errorID;
+    int deviceCount = NO_DEVICE;
+    struct cudaDeviceProp deviceProp;
+    struct deviceInfoList *gpuList;
+    
+    /* Check for valid devices */
+    cudaDeviceReset();
+    errorID = cudaGetDeviceCount(&deviceCount);
+    if(errorID != cudaSuccess) {
+        printf("cudaGetDeviceCount returned %d\n%s", (int)errorID, 
+               cudaGetErrorString(errorID));
+        exit(FAILURE);
+    }
+    if(deviceCount == NO_DEVICE) {
+        printf("\nError: Could not detect CUDA supported GPU(s)\n\n");
+        exit(FAILURE);
+    }
+    printf("\nINFO: Detected %d CUDA-supported GPU(s)\n", deviceCount);
+    *nDevices = deviceCount;
+
+    /* Store useful information about each GPU in a structure array */
+    gpuList = malloc(deviceCount * sizeof(struct deviceInfoList));
+    for(dev=0; dev < deviceCount; dev++) {
+        cudaSetDevice(dev);
+        cudaGetDeviceProperties(&deviceProp, dev);
+        printf("\nDevice %d: %s", dev, deviceProp.name);
+        gpuList[dev].deviceID    = dev;
+        gpuList[dev].globalMem   = deviceProp.totalGlobalMem;
+        gpuList[dev].constantMem = deviceProp.totalConstMem;
+        gpuList[dev].sharedMemPerBlock = deviceProp.sharedMemPerBlock;
+        gpuList[dev].maxThreadPerMP = deviceProp.maxThreadsPerMultiProcessor;
+        gpuList[dev].maxThreadPerBlock = deviceProp.maxThreadsPerBlock;
+        gpuList[dev].threadBlockSize[0] = deviceProp.maxThreadsDim[0];
+        gpuList[dev].threadBlockSize[1] = deviceProp.maxThreadsDim[1];
+        gpuList[dev].threadBlockSize[2] = deviceProp.maxThreadsDim[2];
+    }
+    printf("\n");
+    return(gpuList);
+}
+
+/*************************************************************
+*
 * Main code
 *
 *************************************************************/
@@ -355,6 +403,9 @@ int main(int argc, char *argv[]) {
     struct parList params;
     int fitsStatus;
     int status;
+    int nDevices, deviceID;
+    struct deviceInfoList *gpuList;
+    int i;
     
     printf("\nRM Synthesis v%s", VERSION_STR);
     printf("\nWritten by Sarrvesh S. Sridhar\n");
@@ -377,6 +428,9 @@ int main(int argc, char *argv[]) {
     
     /* Print parset input options to screen */
     printOptions(inOptions);
+    
+    /* Retreive information about all connected GPU devices */
+    gpuList = getDeviceInformation(&nDevices);
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");

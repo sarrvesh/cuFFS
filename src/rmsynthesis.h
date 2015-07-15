@@ -1,10 +1,19 @@
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<math.h>
-#include"version.h"
-#include"libconfig.h"
-#include"fitsio.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
+#include "version.h"
+#include "libconfig.h"
+#include "fitsio.h"
+
+#include<cuda_runtime.h>
+#include<cuda.h>
+
+#define NO_DEVICE 0
+#define N_DIMS 3
+#define X_DIM 0
+#define Y_DIM 1
+#define Z_DIM 2
 
 #define SUCCESS 0
 #define FAILURE 1
@@ -46,4 +55,14 @@ struct parList {
     float *rmsf, *rmsfReal, *rmsfImag;
     
     float *qImageArray, *uImageArray;
+};
+
+/* Structure to store useful GPU device information */
+struct deviceInfoList {
+    int deviceID;
+    long unsigned int globalMem, constantMem, sharedMemPerBlock;
+    //int nMP, nCudaCorePerMP, nCudaCores;
+    int maxThreadPerMP;
+    int maxThreadPerBlock;
+    int threadBlockSize[N_DIMS];
 };
