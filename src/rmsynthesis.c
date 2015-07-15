@@ -289,7 +289,7 @@ int plotRMSF(struct optionsList inOptions) {
     FILE *gnuplotPipe;
     char commands[STRING_BUF_LEN];
     
-    gnuplotPipe = popen("gnuplot -p", FILE_READWRITE);
+    gnuplotPipe = popen("gnuplot -persist", FILE_READWRITE);
     if(gnuplotPipe == NULL)
         return(FAILURE);
     
