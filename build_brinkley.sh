@@ -17,4 +17,4 @@ else
     printf "Compiling with Gnuplot\n"
 fi
 
-gcc -Wall -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -o rmsynthesis src/rmsynthesis.c -lconfig -lcfitsio -lm $MACRO
+nvcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -o rmsynthesis src/rmsynthesis.c -lconfig -lcfitsio -lm $MACRO
