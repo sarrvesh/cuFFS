@@ -25,7 +25,7 @@
 #define FILE_READONLY       "r"
 #define FILE_READWRITE      "w"
 
-#define LIGHTSPEED 299792458
+#define LIGHTSPEED 299792458.
 
 /* Structure to store the input options */
 struct optionsList {
@@ -33,6 +33,8 @@ struct optionsList {
     char *uCubeName;
     char *freqFileName;
     char *outPrefix;
+    char *imageMask;
+    int isImageMaskDefined;
     
     double phiMin, dPhi;
     int nPhi;
@@ -41,11 +43,13 @@ struct optionsList {
 /* Structure to store all information related to RM Synthesis */
 struct parList {
     fitsfile *qFile, *uFile;
+    fitsfile *maskFile;
     FILE *freq;
     
     int qAxisNum, uAxisNum;
     int qAxisLen1, qAxisLen2, qAxisLen3;
     int uAxisLen1, uAxisLen2, uAxisLen3;
+    int maskAxisLen1, maskAxisLen2;
     
     float *freqList;
     float *lambda2;
@@ -55,6 +59,7 @@ struct parList {
     float *rmsf, *rmsfReal, *rmsfImag;
     
     float *qImageArray, *uImageArray;
+    float *maskArray;
 };
 
 /* Structure to store useful GPU device information */

@@ -1,7 +1,10 @@
 // Define how fits files are stored on disk
-qCubeName = "testFiles/Q.fits";
-uCubeName = "testFiles/U.fits";
+qCubeName = "testFiles/M101_Q.fits";
+uCubeName = "testFiles/M101_U.fits";
 freqFileName = "testFiles/freqTable";
+
+// Define an image mask to select pixels
+imageMask = "testFiles/MASK.fits";
 
 // Define the faraday depth axis. All units in rad/m/m
 phiMin = -1000.;

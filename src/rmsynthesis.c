@@ -66,6 +66,17 @@ struct optionsList parseInput(char *parsetFileName) {
         exit(FAILURE);
     }
 
+    /* Check if an image mask is defined */
+    if(! config_lookup_string(&cfg, "imageMask", &str)) {
+        printf("\nINFO: Image mask not specified");
+        inOptions.isImageMaskDefined = FALSE;
+    }
+    else {
+        inOptions.imageMask = malloc(strlen(str));
+        strcpy(inOptions.imageMask, str);
+        inOptions.isImageMaskDefined = TRUE;
+    }
+
     /* Get prefix for output files */
     if(config_lookup_string(&cfg, "outPrefix", &str)) {
         inOptions.outPrefix = malloc(strlen(str));
@@ -112,6 +123,8 @@ void printOptions(struct optionsList inOptions) {
     printf("\nQ Cube: %s", inOptions.qCubeName);
     printf("\nU Cube: %s", inOptions.uCubeName);
     printf("\n");
+    if(inOptions.isImageMaskDefined == TRUE)
+        printf("\nImage mask: %s\n", inOptions.imageMask);
     printf("\nphi min: %.2f", inOptions.phiMin);
     printf("\n# of phi planes: %d", inOptions.nPhi);
     printf("\ndelta phi: %.2lf", inOptions.dPhi);
@@ -186,7 +199,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
 
 /*************************************************************
 *
-* Read the list of frequencies from the input freq file
+* Generate Rotation Measure Spread Function
 *
 *************************************************************/
 int generateRMSF(struct optionsList *inOptions, struct parList *params) {
@@ -312,7 +325,7 @@ int plotRMSF(struct optionsList inOptions) {
 
 /*************************************************************
 *
-* Read in the stokes-Q and -U images 
+* Read in the Stokes-Q and -U images
 *
 *************************************************************/
 int getImageData(struct optionsList *inOptions, struct parList *params) {
@@ -340,6 +353,22 @@ int getImageData(struct optionsList *inOptions, struct parList *params) {
         fits_report_error(stdout, status);
         return(FAILURE);
     }
+    return(SUCCESS);
+}
+
+/*************************************************************
+*
+* Read in the input mask image
+*
+*************************************************************/
+int getImageMask(struct optionsList *inOptions, struct parList *params) {
+    int fitsStatus = SUCCESS;
+    char fitsComment[FLEN_COMMENT];
+
+    fits_read_key(params->maskFile, TINT, "NAXIS1", &params->maskAxisLen1, fitsComment, &fitsStatus);
+    fits_read_key(params->maskFile, TINT, "NAXIS2", &params->maskAxisLen2, fitsComment, &fitsStatus);
+
+    /*fits_read_key(params->qFile, TINT, "NAXIS", &params->qAxisNum, fitsComment, &fitsStatus);*/
     return(SUCCESS);
 }
 
@@ -406,6 +435,8 @@ int main(int argc, char *argv[]) {
     int nDevices, deviceID;
     struct deviceInfoList *gpuList;
     int i;
+
+    fitsfile *x;
     
     printf("\nRM Synthesis v%s", VERSION_STR);
     printf("\nWritten by Sarrvesh S. Sridhar\n");
@@ -447,8 +478,17 @@ int main(int argc, char *argv[]) {
         printf("\nError: Unable to open the frequency file\n\n");
         return(FAILURE);
     }
+    if(inOptions.isImageMaskDefined == TRUE) {
+        printf("\nINFO: Accessing the input image mask %s", inOptions.imageMask);
+        fitsStatus = SUCCESS;
+        fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, &fitsStatus);
+        if(fitsStatus != SUCCESS) {
+            fits_report_error(stdout, fitsStatus);
+            return(fitsStatus);
+        }
+    }
     
-    /* Gather information from fits header */
+    /* Gather information from input image fits header */
     status = getFitsHeader(&inOptions, &params);
     if(status) {
         fits_report_error(stdout, status);
@@ -486,6 +526,16 @@ int main(int argc, char *argv[]) {
     printf("\nINFO: Reading in FITS images");
     if(getImageData(&inOptions, &params))
         return(FAILURE);
+
+    /* Read image mask */
+    printf("\nINFO: Reading in input image mask");
+    if(inOptions.isImageMaskDefined == TRUE) {
+        printf("\nImage mask is defined. Use the image mask.");
+        if(getImageMask(&inOptions, &params))
+            return(FAILURE);
+    }
+    else
+        printf("\nImage mask is not defined. Making a mask to include all pixels.");
 
     printf("\n\n");
     return(SUCCESS);
