@@ -104,6 +104,10 @@ struct optionsList parseInput(char *parsetFileName) {
         config_destroy(&cfg);
         exit(FAILURE);
     }
+    if(! config_lookup_bool(&cfg, "plotRMSF", &inOptions.plotRMSF)) {
+        printf("\nINFO: 'plotRMSF' undefined in parset");
+        inOptions.plotRMSF = FALSE;
+    }
     
     config_destroy(&cfg);
     return(inOptions);
@@ -515,10 +519,13 @@ int main(int argc, char *argv[]) {
     }
     /* Plot RMSF */
     #ifdef GNUPLOT_ENABLE
-    printf("\nINFO: Plotting RMSF with gnuplot");
-    if(plotRMSF(inOptions)) {
-        printf("\nError: Unable to plot RMSF\n\n");
-        return(FAILURE);
+    printf("\nINFO: plotRMSF = %d  %d", inOptions.plotRMSF, TRUE);
+    if(inOptions.plotRMSF == TRUE) {
+        printf("\nINFO: Plotting RMSF with gnuplot");
+        if(plotRMSF(inOptions)) {
+            printf("\nError: Unable to plot RMSF\n\n");
+            return(FAILURE);
+        }
     }
     #endif
     

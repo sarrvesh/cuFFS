@@ -36,6 +36,7 @@ struct optionsList {
     char *imageMask;
     int isImageMaskDefined;
     
+    int plotRMSF;
     double phiMin, dPhi;
     int nPhi;
 };
