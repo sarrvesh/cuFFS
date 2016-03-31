@@ -127,8 +127,10 @@ void printOptions(struct optionsList inOptions) {
     printf("\nQ Cube: %s", inOptions.qCubeName);
     printf("\nU Cube: %s", inOptions.uCubeName);
     printf("\n");
-    if(inOptions.isImageMaskDefined == TRUE)
+    if(inOptions.isImageMaskDefined == TRUE) {
         printf("\nImage mask: %s\n", inOptions.imageMask);
+        printf("\n");
+    }
     printf("\nphi min: %.2f", inOptions.phiMin);
     printf("\n# of phi planes: %d", inOptions.nPhi);
     printf("\ndelta phi: %.2lf", inOptions.dPhi);
@@ -419,6 +421,9 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
         gpuList[dev].threadBlockSize[0] = deviceProp.maxThreadsDim[0];
         gpuList[dev].threadBlockSize[1] = deviceProp.maxThreadsDim[1];
         gpuList[dev].threadBlockSize[2] = deviceProp.maxThreadsDim[2];
+        printf("\n%d", deviceProp.multiProcessorCount);
+        printf("\n%d %d %d\n", deviceProp.maxThreadsDim[0], deviceProp.maxThreadsDim[1], deviceProp.maxThreadsDim[2]);
+        printf("\n%ld", deviceProp.maxThreadsDim[0]*deviceProp.maxThreadsDim[1]*deviceProp.maxThreadsDim[2]);
     }
     printf("\n");
     return(gpuList);
@@ -439,6 +444,7 @@ int main(int argc, char *argv[]) {
     int nDevices, deviceID;
     struct deviceInfoList *gpuList;
     int i;
+    int k, l, m;
 
     fitsfile *x;
     
@@ -446,7 +452,7 @@ int main(int argc, char *argv[]) {
     printf("\nWritten by Sarrvesh S. Sridhar\n");
     
     /* Verify command line input */
-    if(argc!=2) {
+    if(argc!=NUM_INPUTS) {
         printf("\nERROR: Invalid command line input. Terminating Execution!");
         printf("\nUsage: %s <parset filename>\n\n", argv[0]);
         return(FAILURE);
@@ -519,7 +525,6 @@ int main(int argc, char *argv[]) {
     }
     /* Plot RMSF */
     #ifdef GNUPLOT_ENABLE
-    printf("\nINFO: plotRMSF = %d  %d", inOptions.plotRMSF, TRUE);
     if(inOptions.plotRMSF == TRUE) {
         printf("\nINFO: Plotting RMSF with gnuplot");
         if(plotRMSF(inOptions)) {
@@ -532,17 +537,7 @@ int main(int argc, char *argv[]) {
     /* Read image planes from the Q and U cubes */
     printf("\nINFO: Reading in FITS images");
     if(getImageData(&inOptions, &params))
-        return(FAILURE);
-
-    /* Read image mask */
-    printf("\nINFO: Reading in input image mask");
-    if(inOptions.isImageMaskDefined == TRUE) {
-        printf("\nImage mask is defined. Use the image mask.");
-        if(getImageMask(&inOptions, &params))
-            return(FAILURE);
-    }
-    else
-        printf("\nImage mask is not defined. Making a mask to include all pixels.");
+        return(FAILURE);    
 
     printf("\n\n");
     return(SUCCESS);

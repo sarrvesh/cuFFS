@@ -1,5 +1,5 @@
 // Define how fits files are stored on disk
-qCubeName = "testFiles/u.sub.fits";
+qCubeName = "testFiles/q.sub.fits";
 uCubeName = "testFiles/u.sub.fits";
 freqFileName = "testFiles/freqTable";
 
@@ -7,7 +7,7 @@ freqFileName = "testFiles/freqTable";
 //imageMask = "testFiles/MASK.fits";
 
 // Define the faraday depth axis. All units in rad/m/m
-plotRMSF = True;
+//plotRMSF = True;
 phiMin = -100.;
 nPhi = 200; // integer
 dPhi = 1.;

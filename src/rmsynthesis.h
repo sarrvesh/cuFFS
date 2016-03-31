@@ -15,6 +15,8 @@
 #define Y_DIM 1
 #define Z_DIM 2
 
+#define NUM_INPUTS 2
+
 #define SUCCESS 0
 #define FAILURE 1
 
