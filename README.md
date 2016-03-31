@@ -1,5 +1,7 @@
 # RMSynth_GPU
 
+* Currently testing on NVidia GeForce GTX 760
+
 Dependencies
 ============
 * [libconfig](http://www.hyperrealm.com/libconfig/)
