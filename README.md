@@ -1,6 +1,11 @@
 # RMSynth_GPU
 
+Code Status
+============
 * Currently testing on NVidia GeForce GTX 760
+
+Why do we need a GPU version?
+=============================
 
 Dependencies
 ============
