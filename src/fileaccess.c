@@ -69,39 +69,6 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
 
 /*************************************************************
 *
-* Read in the Stokes-Q and -U images
-*
-*************************************************************/
-int getImageData(struct optionsList *inOptions, struct parList *params) {
-    long *fPixel;
-    int i;
-    LONGLONG nElements;
-    int status = SUCCESS;
-    
-    /* Set the starting pixel to read from the FITS file */
-    fPixel = calloc(params->qAxisNum, sizeof(fPixel));
-    for(i=1; i<=params->qAxisNum; i++)
-        fPixel[i-1] = 1;
-    
-    /* Allocate memory to store the Q and U image arrays */
-    nElements = params->qAxisLen1 * params->qAxisLen2 * params->qAxisLen3;
-    params->qImageArray = calloc(nElements, sizeof(params->qImageArray));
-    params->uImageArray = calloc(nElements, sizeof(params->uImageArray));
-    
-    /* Read pixel values */
-    fits_read_pix(params->qFile, TFLOAT, fPixel, nElements, NULL, params->qImageArray, NULL, &status);
-    fits_read_pix(params->uFile, TFLOAT, fPixel, nElements, NULL, params->uImageArray, NULL, &status);
-    fits_close_file(params->qFile, &status);
-    fits_close_file(params->uFile, &status);
-    if(status) {
-        fits_report_error(stdout, status);
-        return(FAILURE);
-    }
-    return(SUCCESS);
-}
-
-/*************************************************************
-*
 * Read in the input mask image
 *
 *************************************************************/

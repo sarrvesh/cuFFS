@@ -36,6 +36,11 @@ int main(int argc, char *argv[]) {
     int status;
     int nDevices;
     struct deviceInfoList *gpuList;
+    int i, j, k;
+
+    long *fPixel;
+    LONGLONG nElements;
+    float *qImageArray, *uImageArray;
     
     printf("\nRM Synthesis v%s", VERSION_STR);
     printf("\nWritten by Sarrvesh S. Sridhar\n");
@@ -124,10 +129,23 @@ int main(int argc, char *argv[]) {
     }
     #endif
     
-    /* Read image planes from the Q and U cubes */
-    printf("\nINFO: Reading in FITS images");
-    if(getImageData(&inOptions, &params))
-        return(FAILURE);
+    printf("\nINFO: Starting RM Synthesis");
+    /* Setup some fitsio access variables */
+    fPixel = calloc(params.qAxisNum, sizeof(fPixel));
+    for(i=1; i<=params.qAxisNum; i++) { fPixel[i-1] = 1; }
+    nElements = params.qAxisLen1 * params.qAxisLen2;
+    qImageArray = calloc(nElements, sizeof(params.qImageArray));
+    uImageArray = calloc(nElements, sizeof(params.uImageArray));
+    for(j=1; j<=params.qAxisLen3; j++) {
+       fPixel[2] = j;
+       fits_read_pix(params.qFile, TFLOAT, fPixel, nElements, NULL, qImageArray, NULL, &status);
+    }
+    free(fPixel);
+    free(qImageArray);
+    free(uImageArray);
+
+    /* Free up all allocated memory */
+    free(gpuList);
 
     printf("\n\n");
     return(SUCCESS);
