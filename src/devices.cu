@@ -57,3 +57,4 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
     printf("\n");
     return(gpuList);
 }
+

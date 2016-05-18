@@ -54,10 +54,10 @@ int main(int argc, char *argv[]) {
     
     /* Parse the input file */
     printf("\nINFO: Parsing input file %s", parsetFileName);
-    //inOptions = parseInput(parsetFileName);
+    inOptions = parseInput(parsetFileName);
     
     /* Print parset input options to screen */
-    //printOptions(inOptions);
+    printOptions(inOptions);
     
     /* Retreive information about all connected GPU devices */
     gpuList = getDeviceInformation(&nDevices);
@@ -66,6 +66,7 @@ int main(int argc, char *argv[]) {
     printf("\nINFO: Accessing the input files");
     printf("\nWARN: Assuming the 3rd axis in the fits files is the frequency axis");
     fitsStatus = SUCCESS;
+    puts(inOptions.qCubeName);
     fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
     fits_open_file(&params.uFile, inOptions.uCubeName, READONLY, &fitsStatus);
     if(fitsStatus != SUCCESS) {
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
     /* Read image planes from the Q and U cubes */
     printf("\nINFO: Reading in FITS images");
     if(getImageData(&inOptions, &params))
-        return(FAILURE);    
+        return(FAILURE);
 
     printf("\n\n");
     return(SUCCESS);
