@@ -28,19 +28,23 @@ v0.1    Assume FITS cubes have at least 3 frames with frequency being the
 *
 *************************************************************/
 int main(int argc, char *argv[]) {
-    /* Variable declaration */
+    /* Host Variable declaration */
     char *parsetFileName = argv[1];
     struct optionsList inOptions;
     struct parList params;
     int fitsStatus;
     int status;
     int nDevices;
+    int selectedDevice;
     struct deviceInfoList *gpuList;
     int i, j, k;
-
     long *fPixel;
     LONGLONG nElements;
     float *qImageArray, *uImageArray;
+    size_t size;
+
+    /* Device variable declaration */
+    float *d_qImageArray, *d_uImageArray;
     
     printf("\nRM Synthesis v%s", VERSION_STR);
     printf("\nWritten by Sarrvesh S. Sridhar\n");
@@ -66,6 +70,10 @@ int main(int argc, char *argv[]) {
     
     /* Retreive information about all connected GPU devices */
     gpuList = getDeviceInformation(&nDevices);
+
+    /* Select the best device */
+    selectedDevice = getBestDevice(gpuList, nDevices);
+    cudaSetDevice(selectedDevice);
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");
@@ -129,20 +137,17 @@ int main(int argc, char *argv[]) {
     }
     #endif
     
-    printf("\nINFO: Starting RM Synthesis");
-    /* Setup some fitsio access variables */
-    fPixel = calloc(params.qAxisNum, sizeof(fPixel));
-    for(i=1; i<=params.qAxisNum; i++) { fPixel[i-1] = 1; }
-    nElements = params.qAxisLen1 * params.qAxisLen2;
-    qImageArray = calloc(nElements, sizeof(params.qImageArray));
-    uImageArray = calloc(nElements, sizeof(params.uImageArray));
-    for(j=1; j<=params.qAxisLen3; j++) {
-       fPixel[2] = j;
-       fits_read_pix(params.qFile, TFLOAT, fPixel, nElements, NULL, qImageArray, NULL, &status);
+    /* Now that everything is set, do some memory checks */ 
+    printf("\nINFO: Size of input Q/U channel: %0.3f KiB", sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
+    printf("\nINFO: Size of output Q/U cube: %0.3f MiB", sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi/MEGA);
+    printf("\nINFO: Available memory on GPU: %0.3f MiB", gpuList[selectedDevice].globalMem/MEGA);
+    if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi > gpuList[selectedDevice].globalMem) {
+        printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
+        return(FAILURE);
     }
-    free(fPixel);
-    free(qImageArray);
-    free(uImageArray);
+    printf("\nINFO: Starting RM Synthesis");
+    printf("\nINFO: Processing channel by channel");
+    doRMSynthesis(&inOptions, &params);
 
     /* Free up all allocated memory */
     free(gpuList);

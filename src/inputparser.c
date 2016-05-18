@@ -28,7 +28,6 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Get the names of fits files */
     if(config_lookup_string(&cfg, "qCubeName", &str)) {
-        printf("\nInput file name is %s\n", str);
         inOptions.qCubeName = malloc(strlen(str));
         strcpy(inOptions.qCubeName, str);
     }

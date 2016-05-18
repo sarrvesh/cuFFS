@@ -24,5 +24,7 @@ extern "C"
 #define FILE_READWRITE      "w"
 
 #define LIGHTSPEED 299792458.
+#define KILO 1000.
+#define MEGA 1000000.
 
 #endif
