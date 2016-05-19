@@ -79,15 +79,12 @@ int main(int argc, char *argv[]) {
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");
-    printf("\nWARN: Assuming the 3rd axis in the fits files is the frequency axis");
+    printf("\nWARN: Assuming NAXIS3 is the frequency axis");
     fitsStatus = SUCCESS;
     puts(inOptions.qCubeName);
     fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
     fits_open_file(&params.uFile, inOptions.uCubeName, READONLY, &fitsStatus);
-    if(fitsStatus != SUCCESS) {
-        fits_report_error(stdout, fitsStatus);
-        return(fitsStatus);
-    }
+    checkFitsError(fitsStatus);
     params.freq = fopen(inOptions.freqFileName, FILE_READONLY);
     if(params.freq == NULL) {
         printf("\nError: Unable to open the frequency file\n\n");
@@ -97,18 +94,12 @@ int main(int argc, char *argv[]) {
         printf("\nINFO: Accessing the input image mask %s", inOptions.imageMask);
         fitsStatus = SUCCESS;
         fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, &fitsStatus);
-        if(fitsStatus != SUCCESS) {
-            fits_report_error(stdout, fitsStatus);
-            return(fitsStatus);
-        }
+        checkFitsError(status);
     }
     
     /* Gather information from input image fits header */
     status = getFitsHeader(&inOptions, &params);
-    if(status) {
-        fits_report_error(stdout, status);
-        return(FAILURE);
-    }
+    checkFitsError(fitsStatus);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params))

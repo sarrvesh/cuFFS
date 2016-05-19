@@ -151,6 +151,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
          qImageArray, NULL, &status);
        fits_read_pix(params->uFile, TFLOAT, fPixel, nElements, NULL,
          uImageArray, NULL, &status);
+       checkFitsError(status);
        /* Copy the read in channel maps to GPU */
        size = nElements*sizeof(d_qImageArray);
        cudaMalloc(&d_qImageArray, size);
@@ -199,10 +200,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
        fPixel[2] = j;
        fits_read_pix(params->qFile, TFLOAT, fPixel, nElements, NULL, qImageArray, NULL, &status);
        fits_read_pix(params->uFile, TFLOAT, fPixel, nElements, NULL, uImageArray, NULL, &status);
-       if(status) {
-           fits_report_error(stdout, status);
-           exit(FAILURE);
-       }
+       checkFitsError(status);
        /* Copy the read in channel maps to GPU */
        size = nElements*sizeof(d_qImageArray);
        cudaMalloc(&d_qImageArray, size);

@@ -5,6 +5,20 @@
 
 /*************************************************************
 *
+* Check Fitsio error and exit if required.
+*
+*************************************************************/
+void checkFitsError(int status) {
+    if(status) {
+        printf("\nERROR:");
+        fits_report_error(stdout, fitsStatus);
+        printf("\n");
+        exit(FAILURE);
+    }
+}
+
+/*************************************************************
+*
 * Read header information from the fits files
 *
 *************************************************************/
@@ -13,15 +27,23 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
     char fitsComment[FLEN_COMMENT];
     
     /* Get the image dimensions from the Q cube */
-    fits_read_key(params->qFile, TINT, "NAXIS", &params->qAxisNum, fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS1", &params->qAxisLen1, fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS2", &params->qAxisLen2, fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS3", &params->qAxisLen3, fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TINT, "NAXIS", &params->qAxisNum, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TINT, "NAXIS1", &params->qAxisLen1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TINT, "NAXIS2", &params->qAxisLen2, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TINT, "NAXIS3", &params->qAxisLen3, 
+      fitsComment, &fitsStatus);
     /* Get the image dimensions from the Q cube */
-    fits_read_key(params->uFile, TINT, "NAXIS", &params->uAxisNum, fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS1", &params->uAxisLen1, fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS2", &params->uAxisLen2, fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS3", &params->uAxisLen3, fitsComment, &fitsStatus);
+    fits_read_key(params->uFile, TINT, "NAXIS", &params->uAxisNum, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->uFile, TINT, "NAXIS1", &params->uAxisLen1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->uFile, TINT, "NAXIS2", &params->uAxisLen2, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->uFile, TINT, "NAXIS3", &params->uAxisLen3,
+      fitsComment, &fitsStatus);
     
     return(fitsStatus);
 }
