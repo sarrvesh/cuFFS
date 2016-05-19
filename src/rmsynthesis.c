@@ -73,10 +73,9 @@ int main(int argc, char *argv[]) {
 
     /* Select the best device */
     selectedDevice = getBestDevice(gpuList, nDevices);
-    if(cudaSetDevice(selectedDevice)) {
-        printf("\nERROR: %s", cudaGetErrorString());
-        return(FAILURE);
-    }
+    cudaSetDevice(selectedDevice);
+    if(cudaGetLastError != cudaSuccess)
+        printCUDAErrorAndExit(cudaGetLastError);
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");
@@ -141,10 +140,14 @@ int main(int argc, char *argv[]) {
     #endif
     
     /* Now that everything is set, do some memory checks */ 
-    printf("\nINFO: Size of input Q/U channel: %0.3f KiB", sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
-    printf("\nINFO: Size of output Q/U cube: %0.3f MiB", sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi/MEGA);
-    printf("\nINFO: Available memory on GPU: %0.3f MiB", gpuList[selectedDevice].globalMem/MEGA);
-    if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi > gpuList[selectedDevice].globalMem) {
+    printf("\nINFO: Size of input Q/U channel: %0.3f KiB", 
+      sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
+    printf("\nINFO: Size of output Q/U cube: %0.3f MiB", 
+      sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi/MEGA);
+    printf("\nINFO: Available memory on GPU: %0.3f MiB", 
+      gpuList[selectedDevice].globalMem/MEGA);
+    if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi >
+      gpuList[selectedDevice].globalMem) {
         printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
         return(FAILURE);
     }

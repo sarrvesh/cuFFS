@@ -8,5 +8,6 @@ extern "C"
 struct deviceInfoList * getDeviceInformation(int *nDevices);
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params);
 int getBestDevice(struct deviceInfoList *gpuList, int nDevices);
+void checkCudaError(void);
 
 #endif
