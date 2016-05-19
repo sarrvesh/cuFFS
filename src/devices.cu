@@ -4,6 +4,9 @@ extern "C" {
 #include "structures.h"
 #include "constants.h"
 #include "devices.h"
+__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
+__global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
+__global__ void initializeQU(float *d_array, int nElements, int nPhi);
 }
 
 /*************************************************************
@@ -100,11 +103,33 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     LONGLONG nElements;
     float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
+    float *d_phiAxis;
+    float *d_qPhi;
     int i, j;
     size_t size;
     int status = 0;
+    cudaError_t errorID;
+
+    /* Copy the phi array to GPU */
+    size = sizeof(d_phiAxis)*inOptions->nPhi;
+    errorID = cudaMalloc(&d_phiAxis, size);
+    if(errorID != cudaSuccess) {
+        printf("\nERROR: Unable to allocate device memory for phi.");
+        return(FAILURE);
+    }
+    cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
+
+    /* Allocate memory for Q(\phi) cube and initialize to 0. */
+    nElements = params->qAxisLen1 * params->qAxisLen2;
+    size = sizeof(d_qPhi)*params->qAxisLen1*params->qAxisLen2*inOptions->nPhi;
+    errorID = cudaMalloc(&d_qPhi, size);
+    if(errorID != cudaSuccess) {
+        printf("\nERROR: Unable to allocate device memory for the output Q cube.");
+        return(FAILURE);
+    }
+    initializeQU<<<1,inOptions->nPhi>>>(d_qPhi, nElements, inOptions->nPhi);
     
-    /* First setup fitsio access variables */
+    /* Setup fitsio access variables */
     fPixel = (long *)calloc(params->qAxisNum, sizeof(fPixel));
     for(i=1; i<=params->qAxisNum; i++) { fPixel[i-1] = 1; }
     nElements = params->qAxisLen1 * params->qAxisLen2;
@@ -122,11 +147,17 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
        cudaMemcpy(d_qImageArray, qImageArray, size, cudaMemcpyHostToDevice);
        cudaMemcpy(d_uImageArray, uImageArray, size, cudaMemcpyHostToDevice);
        /* Launch kernels to do RM Synthesis */
-       /* Copy the results to host */
+       /* Note that the number of threads launched MUST BE EQUAL TO OR GREATER than the number of phi planes. 
+          Assume for now that <<<>>> is int and not dim3. If this assumption is changed, index computation in
+          kernels must be changed */
+       computeQ<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_qPhi, d_phiAxis, inOptions->nPhi, nElements, params->lambda2[j-1], params->lambda20);
        /* Free the allocated device memory */
        cudaFree(d_qImageArray);
        cudaFree(d_uImageArray);
     }
+    /* Free remaining allocated mem on device */
+    cudaFree(d_phiAxis);
+    cudaFree(d_qPhi);
     if(status) {
         fits_report_error(stdout, status);
         return(FAILURE);
@@ -136,4 +167,60 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     free(uImageArray);
 
     return(SUCCESS);
+}
+
+/*************************************************************
+*
+* Device code to compute Q(\phi)
+*
+*************************************************************/
+extern "C"
+__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20) {
+    int i;
+    int index = blockIdx.x*blockDim.x + threadIdx.x;
+    float thisPhi = d_phiAxis[index];    
+    float thisCos = cosf(2*thisPhi*(lambda2-lambda20));
+    float thisSin = sinf(2*thisPhi*(lambda2-lambda20));
+
+    if(index < nPhi) {
+        /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
+        for(i=0; i<nElements; i++) 
+            d_qPhi[index*nElements+i] += d_qImageArray[i]*thisCos - d_uImageArray[i]*thisSin;
+    }
+}
+
+/*************************************************************
+*
+* Device code to compute U(\phi)
+*
+*************************************************************/
+extern "C"
+__global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20) {
+    int i;
+    int index = blockIdx.x*blockDim.x + threadIdx.x;
+    float thisPhi = d_phiAxis[index];
+    float thisCos = cosf(2*thisPhi*(lambda2-lambda20));
+    float thisSin = sinf(2*thisPhi*(lambda2-lambda20));
+
+    if(index < nPhi) {
+        /* For each element in U, compute U(thisPhi) and add it to U(phi) */
+        for(i=0; i<nElements; i++) 
+            d_uPhi[index*nElements+i] += d_uImageArray[i]*thisCos - d_qImageArray[i]*thisSin;
+    }
+}
+
+/*************************************************************
+*
+* Initialize Q(\phi) and U(\phi)
+*
+*************************************************************/
+extern "C"
+__global__ void initializeQU(float *d_array, int nElements, int nPhi) {
+    int i;
+    int index = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if(index < nPhi) {
+        for(i=0; i<nElements; i++)
+            d_array[index*nElements+i] = 0.0;
+    }
 }
