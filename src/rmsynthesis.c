@@ -73,7 +73,10 @@ int main(int argc, char *argv[]) {
 
     /* Select the best device */
     selectedDevice = getBestDevice(gpuList, nDevices);
-    cudaSetDevice(selectedDevice);
+    if(cudaSetDevice(selectedDevice)) {
+        printf("\nERROR: %s", cudaGetErrorString());
+        return(FAILURE);
+    }
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");
