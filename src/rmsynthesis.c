@@ -74,8 +74,7 @@ int main(int argc, char *argv[]) {
     /* Select the best device */
     selectedDevice = getBestDevice(gpuList, nDevices);
     cudaSetDevice(selectedDevice);
-    if(cudaGetLastError != cudaSuccess)
-        printCUDAErrorAndExit(cudaGetLastError);
+    checkCudaError();
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");

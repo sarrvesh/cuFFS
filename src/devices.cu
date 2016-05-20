@@ -4,6 +4,7 @@ extern "C" {
 #include "structures.h"
 #include "constants.h"
 #include "devices.h"
+#include "fileaccess.h"
 __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
@@ -120,11 +121,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     int i, j;
     size_t size;
     int status = 0;
-    cudaError_t errorID;
 
     /* Copy the phi array to GPU */
     size = sizeof(d_phiAxis)*inOptions->nPhi;
-    errorID = cudaMalloc(&d_phiAxis, size);
+    cudaMalloc(&d_phiAxis, size);
     cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
     checkCudaError();
 

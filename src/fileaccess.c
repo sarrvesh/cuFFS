@@ -11,7 +11,7 @@
 void checkFitsError(int status) {
     if(status) {
         printf("\nERROR:");
-        fits_report_error(stdout, fitsStatus);
+        fits_report_error(stdout, status);
         printf("\n");
         exit(FAILURE);
     }
