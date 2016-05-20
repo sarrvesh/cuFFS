@@ -20,7 +20,7 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Read in the configuration file */
     if(!config_read_file(&cfg, parsetFileName)) {
-        printf("\nError: Error reading parset file. Exiting with message: %s\n\n", 
+        printf("\nError: Error reading parset file. %s\n\n", 
                config_error_text(&cfg));
         config_destroy(&cfg);
         exit(FAILURE);
@@ -74,7 +74,8 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.outPrefix, str);
     }
     else {
-        printf("\nINFO: 'outPrefix' is not defined. Defaulting to %s", DEFAULT_OUT_PREFIX);
+        printf("\nINFO: 'outPrefix' is not defined. Defaulting to %s", 
+                DEFAULT_OUT_PREFIX);
         inOptions.outPrefix = malloc(strlen(DEFAULT_OUT_PREFIX));
         strcpy(inOptions.outPrefix, DEFAULT_OUT_PREFIX);
     }

@@ -90,9 +90,10 @@ int main(int argc, char *argv[]) {
         return(FAILURE);
     }
     if(inOptions.isImageMaskDefined == TRUE) {
-        printf("\nINFO: Accessing the input image mask %s", inOptions.imageMask);
+        printf("\nINFO: Accessing the input mask %s", inOptions.imageMask);
         fitsStatus = SUCCESS;
-        fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, &fitsStatus);
+        fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, 
+                       &fitsStatus);
         checkFitsError(status);
     }
     
@@ -131,13 +132,14 @@ int main(int argc, char *argv[]) {
     
     /* Now that everything is set, do some memory checks */ 
     printf("\nINFO: Size of input Q/U channel: %0.3f KiB", 
-      sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
-    printf("\nINFO: Size of output Q/U cube: %0.3f MiB", 
-      sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi/MEGA);
+           sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
+    printf("\nINFO: Size of output Q/U cube: %0.3f MiB",
+           sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*
+           inOptions.nPhi/MEGA);
     printf("\nINFO: Available memory on GPU: %0.3f MiB", 
-      gpuList[selectedDevice].globalMem/MEGA);
+           gpuList[selectedDevice].globalMem/MEGA);
     if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi >
-      gpuList[selectedDevice].globalMem) {
+       gpuList[selectedDevice].globalMem) {
         printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
         return(FAILURE);
     }

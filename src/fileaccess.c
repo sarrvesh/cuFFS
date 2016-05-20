@@ -65,7 +65,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     for(i=0; i<params->qAxisLen3; i++) {
         fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
-            printf("\nError: Less frequency values present than fits frames\n\n");
+            printf("\nError: Frequency values and fits frames don't match\n");
             return(FAILURE);
         }
     }
@@ -98,9 +98,9 @@ int getImageMask(struct optionsList *inOptions, struct parList *params) {
     int fitsStatus = SUCCESS;
     char fitsComment[FLEN_COMMENT];
 
-    fits_read_key(params->maskFile, TINT, "NAXIS1", &params->maskAxisLen1, fitsComment, &fitsStatus);
-    fits_read_key(params->maskFile, TINT, "NAXIS2", &params->maskAxisLen2, fitsComment, &fitsStatus);
-
-    /*fits_read_key(params->qFile, TINT, "NAXIS", &params->qAxisNum, fitsComment, &fitsStatus);*/
+    fits_read_key(params->maskFile, TINT, "NAXIS1", &params->maskAxisLen1, 
+                  fitsComment, &fitsStatus);
+    fits_read_key(params->maskFile, TINT, "NAXIS2", &params->maskAxisLen2, 
+                  fitsComment, &fitsStatus);
     return(SUCCESS);
 }

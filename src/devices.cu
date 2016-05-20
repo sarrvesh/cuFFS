@@ -5,8 +5,12 @@ extern "C" {
 #include "constants.h"
 #include "devices.h"
 #include "fileaccess.h"
-__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
-__global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20);
+__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
+                         float *d_qPhi, float *d_phiAxis, int nPhi, 
+                         int nElements, float lambda2, float lambda20);
+__global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
+                         float *d_uPhi, float *d_phiAxis, int nPhi, 
+                         int nElements, float lambda2, float lambda20);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
 }
 
@@ -196,8 +200,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
        fPixel[2] = j;
-       fits_read_pix(params->qFile, TFLOAT, fPixel, nImElements, NULL, qImageArray, NULL, &status);
-       fits_read_pix(params->uFile, TFLOAT, fPixel, nImElements, NULL, uImageArray, NULL, &status);
+       fits_read_pix(params->qFile, TFLOAT, fPixel, nImElements, NULL, 
+                     qImageArray, NULL, &status);
+       fits_read_pix(params->uFile, TFLOAT, fPixel, nImElements, NULL, 
+                     uImageArray, NULL, &status);
        checkFitsError(status);
        /* Copy the read in channel maps to GPU */
        cudaMalloc(&d_qImageArray, imSize);
@@ -206,7 +212,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
        cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
        checkCudaError();
        /* Launch kernels to do RM Synthesis */
-       computeU<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_uPhi, d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], params->lambda20);
+       computeU<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_uPhi, 
+                                       d_phiAxis, inOptions->nPhi, nImElements, 
+                                       params->lambda2[j-1], params->lambda20);
        checkCudaError();
        /* Free the allocatd device memory */
        cudaFree(d_qImageArray);
@@ -235,7 +243,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
 *
 *************************************************************/
 extern "C"
-__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20) {
+__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
+                         float *d_qPhi, float *d_phiAxis, int nPhi, 
+                         int nElements, float lambda2, float lambda20) {
     int i;
     int index = blockIdx.x*blockDim.x + threadIdx.x;
     float thisPhi = d_phiAxis[index];    
@@ -245,7 +255,8 @@ __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qP
     if(index < nPhi) {
         /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
         for(i=0; i<nElements; i++) 
-            d_qPhi[index*nElements+i] += d_qImageArray[i]*thisCos - d_uImageArray[i]*thisSin;
+            d_qPhi[index*nElements+i] += d_qImageArray[i]*thisCos - 
+                                         d_uImageArray[i]*thisSin;
     }
 }
 
@@ -255,7 +266,9 @@ __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, float *d_qP
 *
 *************************************************************/
 extern "C"
-__global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uPhi, float *d_phiAxis, int nPhi, int nElements, float lambda2, float lambda20) {
+__global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
+                         float *d_uPhi, float *d_phiAxis, int nPhi, 
+                         int nElements, float lambda2, float lambda20) {
     int i;
     int index = blockIdx.x*blockDim.x + threadIdx.x;
     float thisPhi = d_phiAxis[index];
@@ -265,7 +278,8 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray, float *d_uP
     if(index < nPhi) {
         /* For each element in U, compute U(thisPhi) and add it to U(phi) */
         for(i=0; i<nElements; i++) 
-            d_uPhi[index*nElements+i] += d_uImageArray[i]*thisCos - d_qImageArray[i]*thisSin;
+            d_uPhi[index*nElements+i] += d_uImageArray[i]*thisCos - 
+                                         d_qImageArray[i]*thisSin;
     }
 }
 

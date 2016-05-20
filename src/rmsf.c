@@ -116,7 +116,7 @@ int plotRMSF(struct optionsList inOptions) {
     sprintf(commands, "set title \"Rotation Measure Spread Function\"\n");
     sprintf(commands, "%sset xlabel \"Faraday Depth\"\n", commands);
     sprintf(commands, "%sset autoscale\n", commands);
-    sprintf(commands, "%splot \"%srmsf.txt\" using 1:2 title 'RMSF' with lines,", 
+    sprintf(commands,"%splot \"%srmsf.txt\" using 1:2 title 'RMSF' with lines,",
             commands, inOptions.outPrefix);
     sprintf(commands, "%s \"%srmsf.txt\" using 1:3 title 'Real' with lines,", 
             commands, inOptions.outPrefix);

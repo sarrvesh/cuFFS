@@ -46,7 +46,6 @@ struct parList {
 struct deviceInfoList {
     int deviceID;
     long unsigned int globalMem, constantMem, sharedMemPerBlock;
-    //int nMP, nCudaCorePerMP, nCudaCores;
     int maxThreadPerMP;
     int maxThreadPerBlock;
     int threadBlockSize[N_DIMS];
