@@ -2,7 +2,7 @@
 LIB_CONFIG_PATH="/data/users/punzo/sarrvesh/Libraries/libconfig"
 # Rootdir of cfitsio
 CFITSIO_PATH="/data/users/punzo/sarrvesh/Libraries/cfitsio"
-#Rootdir of CUDA Toolkit
+# CUDA rootdir
 CUDA_PATH="/data/users/punzo/sarrvesh/CUDA/Toolkit"
 
 #####################################################################
@@ -31,7 +31,7 @@ gcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH
 printf "Compiling rmsf.c\n"
 gcc -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rmsf.c
 
-printf "Compiling rmsynthesis.cu\n"
+printf "Compiling rmsynthesis.c\n"
 gcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c
 
 nvcc -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm
