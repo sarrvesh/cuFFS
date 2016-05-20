@@ -1,7 +1,9 @@
 #include "fitsio.h"
 #include "structures.h"
-
+#include "constants.h"
 #include "fileaccess.h"
+
+#define IM_TYPE FLOAT_IMG
 
 /*************************************************************
 *
@@ -103,4 +105,30 @@ int getImageMask(struct optionsList *inOptions, struct parList *params) {
     fits_read_key(params->maskFile, TINT, "NAXIS2", &params->maskAxisLen2, 
                   fitsComment, &fitsStatus);
     return(SUCCESS);
+}
+
+/*************************************************************
+*
+* Write the output Q, U or P cubes to disk
+*
+*************************************************************/
+int writePolCubeToDisk(float *fitsCube, char *fileName, 
+                       struct optionsList *inOptions, struct parList *params) {
+    fitsfile *ptr;
+    int status = SUCCESS;
+    long naxis[FITS_OUT_NAXIS];
+    char fitsComment[FLEN_COMMENT];
+    
+    /* Open the output fitsfile */
+    fits_create_file(&ptr, fileName, &status);
+    /* Set the axes lengths */
+    naxis[RA_AXIS] = params->uAxisLen1;
+    naxis[DEC_AXIS] = params->qAxisLen2;
+    naxis[PHI_AXIS] = inOptions->nPhi;
+    fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &status);
+    /* Write appropriate keywords to fits header */
+    
+    /* Close the created file */
+    fits_close_file(ptr, &status);
+    checkFitsError(status);
 }

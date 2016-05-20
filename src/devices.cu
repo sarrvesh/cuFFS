@@ -122,6 +122,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     float *d_qImageArray, *d_uImageArray;
     float *d_phiAxis;
     float *d_qPhi, *d_uPhi;
+    float *qPhi, *uPhi;
     int i, j;
     size_t size, imSize, cubeSize;
     int status = 0;
@@ -179,10 +180,14 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
        cudaFree(d_uImageArray);
     }
     /* Move the computed Q(phi) to host */
-    params->qPhi = (float *)calloc(nCubeElements, sizeof(params->qPhi));
-    cudaMemcpy(params->qPhi, d_qPhi, cubeSize, cudaMemcpyDeviceToHost);
+    qPhi = (float *)calloc(nCubeElements, sizeof(qPhi));
+    cudaMemcpy(qPhi, d_qPhi, cubeSize, cudaMemcpyDeviceToHost);
     cudaFree(d_qPhi);
     checkCudaError();
+    /* Write the Q cube to disk */
+    writePolCubeToDisk(qPhi, strcat(inOptions->outPrefix, DIRTY_Q), 
+                       inOptions, params);
+    free(qPhi);
 
     /**********************************************************
      *                    COMPUTE U(\PHI)
@@ -221,10 +226,14 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
        cudaFree(d_uImageArray);
     }
     /* Move the computed U(phi) to host */
-    params->uPhi = (float *)calloc(nCubeElements, sizeof(params->uPhi));
-    cudaMemcpy(params->uPhi, d_uPhi, cubeSize, cudaMemcpyDeviceToHost);
+    uPhi = (float *)calloc(nCubeElements, sizeof(uPhi));
+    cudaMemcpy(uPhi, d_uPhi, cubeSize, cudaMemcpyDeviceToHost);
     cudaFree(d_uPhi);
     checkCudaError();
+    /* Write the U cube to disk */
+    writePolCubeToDisk(uPhi, strcat(inOptions->outPrefix, DIRTY_U),
+                       inOptions, params);
+    free(uPhi);
 
     /* Free remaining allocated mem on device */
     cudaFree(d_phiAxis);
