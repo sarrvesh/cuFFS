@@ -46,6 +46,23 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
       fitsComment, &fitsStatus);
     fits_read_key(params->uFile, TINT, "NAXIS3", &params->uAxisLen3,
       fitsComment, &fitsStatus);
+    /* Get WCS information */
+    fits_read_key(params->qFile, TFLOAT, "CRVAL1", &params->crval1,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TFLOAT, "CRVAL2", &params->crval2,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TFLOAT, "CRPIX1", &params->crpix1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TFLOAT, "CRPIX2", &params->crpix2,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TFLOAT, "CDELT1", &params->cdelt1,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TFLOAT, "CDELT2", &params->cdelt2,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TSTRING, "CTYPE1", &params->ctype1,
+      fitsComment, &fitsStatus);
+    fits_read_key(params->qFile, TSTRING, "CTYPE2", &params->ctype2,
+      fitsComment, &fitsStatus);
     
     return(fitsStatus);
 }
@@ -115,33 +132,39 @@ int getImageMask(struct optionsList *inOptions, struct parList *params) {
 int writePolCubeToDisk(float *fitsCube, char *fileName, 
                        struct optionsList *inOptions, struct parList *params) {
     fitsfile *ptr;
-    int status = SUCCESS;
+    int stat = SUCCESS;
     long naxis[FITS_OUT_NAXIS];
-    char fitsComment[FLEN_COMMENT];
+    char fComment[FLEN_COMMENT];
     char card[FLEN_CARD];
     char filenamefull[FILENAME_LEN];
     float tempVar;
     
     /* Open the output fitsfile */
     sprintf(filenamefull, "%s%s", inOptions->outPrefix, fileName);
-    fits_create_file(&ptr, filenamefull, &status);
+    fits_create_file(&ptr, filenamefull, &stat);
     /* Set the axes lengths */
     naxis[RA_AXIS] = params->uAxisLen1;
     naxis[DEC_AXIS] = params->qAxisLen2;
     naxis[PHI_AXIS] = inOptions->nPhi;
-    fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &status);
+    fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
     /* Write appropriate keywords to fits header */
-    fits_write_key(ptr, TDOUBLE, "CRVAL3", &inOptions->phiMin, fitsComment, 
-                   &status);
-    fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fitsComment,
-                   &status);
+    fits_write_key(ptr, TFLOAT, "CRVAL1", &params->crval1, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
+    fits_write_key(ptr, TDOUBLE, "CRVAL3", &inOptions->phiMin, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CDELT1", &params->cdelt1, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
+    fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CRPIX1", &params->crpix1, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
     tempVar = 1.;
-    fits_write_key(ptr, TFLOAT, "CRPIX3", &tempVar, fitsComment, &status);
+    fits_write_key(ptr, TFLOAT, "CRPIX3", &tempVar, fComment, &stat);
+    fits_write_key(ptr, TSTRING, "CTYPE1", params->ctype1, fComment, &stat);
+    fits_write_key(ptr, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
     sprintf(filenamefull, "PHI");
-    fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fitsComment, &status);
+    fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fComment, &stat);
     sprintf(filenamefull, "JY/BEAM");
-    fits_write_key(ptr, TSTRING, "BUNIT", filenamefull, fitsComment, &status);
+    fits_write_key(ptr, TSTRING, "BUNIT", filenamefull, fComment, &stat);
     /* Close the created file */
-    fits_close_file(ptr, &status);
-    checkFitsError(status);
+    fits_close_file(ptr, &stat);
+    checkFitsError(stat);
 }

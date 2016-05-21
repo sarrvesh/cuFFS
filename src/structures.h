@@ -29,6 +29,10 @@ struct parList {
     int qAxisLen1, qAxisLen2, qAxisLen3;
     int uAxisLen1, uAxisLen2, uAxisLen3;
     int maskAxisLen1, maskAxisLen2;
+    float crval1, crval2;
+    float crpix1, crpix2;
+    float cdelt1, cdelt2;
+    char ctype1[CTYPE_LEN], ctype2[CTYPE_LEN];
     
     float *freqList;
     float *lambda2;

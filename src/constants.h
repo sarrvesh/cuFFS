@@ -23,6 +23,7 @@ extern "C"
 #define SCREEN_WIDTH        40
 #define FILE_READONLY       "r"
 #define FILE_READWRITE      "w"
+#define CTYPE_LEN           10
 
 #define FITS_OUT_NAXIS 3
 #define RA_AXIS        0
