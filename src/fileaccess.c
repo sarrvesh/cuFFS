@@ -130,9 +130,9 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     naxis[PHI_AXIS] = inOptions->nPhi;
     fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &status);
     /* Write appropriate keywords to fits header */
-    fits_write_key(ptr, TFLOAT, "CRVAL3", &inOptions->phiMin, fitsComment, 
+    fits_write_key(ptr, TDOUBLE, "CRVAL3", &inOptions->phiMin, fitsComment, 
                    &status);
-    fits_write_key(ptr, TFLOAT, "CDELT3", &inOptions->dPhi, fitsComment,
+    fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fitsComment,
                    &status);
     /* Close the created file */
     fits_close_file(ptr, &status);
