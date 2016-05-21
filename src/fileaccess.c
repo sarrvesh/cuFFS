@@ -138,6 +138,9 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     char card[FLEN_CARD];
     char filenamefull[FILENAME_LEN];
     float tempVar;
+    int i, imIndex;
+    LONGLONG nImElements;
+    long *fPixel;
     
     /* Open the output fitsfile */
     sprintf(filenamefull, "%s%s", inOptions->outPrefix, fileName);
@@ -168,6 +171,15 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     sprintf(filenamefull, "PHI");
     fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fComment, &stat);
     /* Write the image plane to disk */
+    nImElements = params->qAxisLen1 * params->qAxisLen2;
+    fPixel = calloc(FITS_OUT_NAXIS, sizeof(fPixel));
+    for(i=1; i<=FITS_OUT_NAXIS; i++) { fPixel[i-1] = 1; }
+    for(i=1; i<=inOptions->nPhi; i++) {
+        imIndex = (i-1)*nImElements;
+        fPixel[2] = i;
+        fits_write_pix(ptr, TFLOAT, fPixel, nImElements, &fitsCube[imIndex], 
+                       &stat);
+    }
     /* Close the created file */
     fits_close_file(ptr, &stat);
     checkFitsError(stat);
