@@ -185,8 +185,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     cudaFree(d_qPhi);
     checkCudaError();
     /* Write the Q cube to disk */
-    writePolCubeToDisk(qPhi, strcat(inOptions->outPrefix, DIRTY_Q), 
-                       inOptions, params);
+    writePolCubeToDisk(qPhi, DIRTY_Q, inOptions, params);
     free(qPhi);
 
     /**********************************************************
@@ -231,8 +230,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     cudaFree(d_uPhi);
     checkCudaError();
     /* Write the U cube to disk */
-    writePolCubeToDisk(uPhi, strcat(inOptions->outPrefix, DIRTY_U),
-                       inOptions, params);
+    writePolCubeToDisk(uPhi, DIRTY_U, inOptions, params);
     free(uPhi);
 
     /* Free remaining allocated mem on device */

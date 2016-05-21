@@ -118,16 +118,22 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     int status = SUCCESS;
     long naxis[FITS_OUT_NAXIS];
     char fitsComment[FLEN_COMMENT];
+    char card[FLEN_CARD];
+    char filenamefull[FILENAME_LEN];
     
     /* Open the output fitsfile */
-    fits_create_file(&ptr, fileName, &status);
+    sprintf(filenamefull, "%s%s", inOptions->outPrefix, fileName);
+    fits_create_file(&ptr, filenamefull, &status);
     /* Set the axes lengths */
     naxis[RA_AXIS] = params->uAxisLen1;
     naxis[DEC_AXIS] = params->qAxisLen2;
     naxis[PHI_AXIS] = inOptions->nPhi;
     fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &status);
     /* Write appropriate keywords to fits header */
-    
+    fits_write_key(ptr, TFLOAT, "CRVAL3", &inOptions->phiMin, fitsComment, 
+                   &status);
+    fits_write_key(ptr, TFLOAT, "CDELT3", &inOptions->dPhi, fitsComment,
+                   &status);
     /* Close the created file */
     fits_close_file(ptr, &status);
     checkFitsError(status);
