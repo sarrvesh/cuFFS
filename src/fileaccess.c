@@ -120,6 +120,7 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     char fitsComment[FLEN_COMMENT];
     char card[FLEN_CARD];
     char filenamefull[FILENAME_LEN];
+    float tempVar;
     
     /* Open the output fitsfile */
     sprintf(filenamefull, "%s%s", inOptions->outPrefix, fileName);
@@ -134,6 +135,12 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
                    &status);
     fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fitsComment,
                    &status);
+    tempVar = 1.;
+    fits_write_key(ptr, TFLOAT, "CRPIX3", &tempVar, fitsComment, &status);
+    sprintf(filenamefull, "PHI");
+    fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fitsComment, &status);
+    sprintf(filenamefull, "JY/BEAM");
+    fits_write_key(ptr, TSTRING, "BUNIT", filenamefull, fitsComment, &status);
     /* Close the created file */
     fits_close_file(ptr, &status);
     checkFitsError(status);
