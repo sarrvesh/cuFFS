@@ -148,22 +148,26 @@ int writePolCubeToDisk(float *fitsCube, char *fileName,
     naxis[PHI_AXIS] = inOptions->nPhi;
     fits_create_img(ptr, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
     /* Write appropriate keywords to fits header */
-    fits_write_key(ptr, TFLOAT, "CRVAL1", &params->crval1, fComment, &stat);
-    fits_write_key(ptr, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
-    fits_write_key(ptr, TDOUBLE, "CRVAL3", &inOptions->phiMin, fComment, &stat);
-    fits_write_key(ptr, TFLOAT, "CDELT1", &params->cdelt1, fComment, &stat);
-    fits_write_key(ptr, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
-    fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fComment, &stat);
-    fits_write_key(ptr, TFLOAT, "CRPIX1", &params->crpix1, fComment, &stat);
-    fits_write_key(ptr, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
-    tempVar = 1.;
-    fits_write_key(ptr, TFLOAT, "CRPIX3", &tempVar, fComment, &stat);
-    fits_write_key(ptr, TSTRING, "CTYPE1", params->ctype1, fComment, &stat);
-    fits_write_key(ptr, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
-    sprintf(filenamefull, "PHI");
-    fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fComment, &stat);
     sprintf(filenamefull, "JY/BEAM");
     fits_write_key(ptr, TSTRING, "BUNIT", filenamefull, fComment, &stat);
+
+    fits_write_key(ptr, TFLOAT, "CRVAL1", &params->crval1, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CDELT1", &params->cdelt1, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CRPIX1", &params->crpix1, fComment, &stat);
+    fits_write_key(ptr, TSTRING, "CTYPE1", params->ctype1, fComment, &stat);
+
+    fits_write_key(ptr, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
+    fits_write_key(ptr, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
+    fits_write_key(ptr, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
+
+    fits_write_key(ptr, TDOUBLE, "CRVAL3", &inOptions->phiMin, fComment, &stat);
+    fits_write_key(ptr, TDOUBLE, "CDELT3", &inOptions->dPhi, fComment, &stat);
+    tempVar = 1.;
+    fits_write_key(ptr, TFLOAT, "CRPIX3", &tempVar, fComment, &stat);
+    sprintf(filenamefull, "PHI");
+    fits_write_key(ptr, TSTRING, "CTYPE3", filenamefull, fComment, &stat);
+    /* Write the image plane to disk */
     /* Close the created file */
     fits_close_file(ptr, &stat);
     checkFitsError(stat);
