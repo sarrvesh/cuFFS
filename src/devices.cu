@@ -12,6 +12,7 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float lambda2, float lambda20);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
+__global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
 }
 
 /*************************************************************
@@ -111,11 +112,35 @@ int getBestDevice(struct deviceInfoList *gpuList, int nDevices) {
 
 /*************************************************************
 *
+* Copy GPU device information of selectedDevice from gpuList 
+*  to selectedDevice
+*
+*************************************************************/
+extern "C"
+struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList, 
+                                             int selectedDevice) {
+    int i = selectedDevice;
+    struct deviceInfoList selectedDeviceInfo;
+    selectedDeviceInfo.deviceID           = gpuList[i].deviceID;
+    selectedDeviceInfo.globalMem          = gpuList[i].globalMem;
+    selectedDeviceInfo.constantMem        = gpuList[i].constantMem;
+    selectedDeviceInfo.sharedMemPerBlock  = gpuList[i].sharedMemPerBlock;
+    selectedDeviceInfo.maxThreadPerMP     = gpuList[i].maxThreadPerMP;
+    selectedDeviceInfo.maxThreadPerBlock  = gpuList[i].maxThreadPerBlock;
+    selectedDeviceInfo.threadBlockSize[0] = gpuList[i].threadBlockSize[0];
+    selectedDeviceInfo.threadBlockSize[1] = gpuList[i].threadBlockSize[1];
+    selectedDeviceInfo.threadBlockSize[2] = gpuList[i].threadBlockSize[2];
+    return selectedDeviceInfo;
+}
+
+/*************************************************************
+*
 * GPU accelerated RM Synthesis function
 *
 *************************************************************/
 extern "C"
-int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
+int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
+                  struct deviceInfoList *gpuList, int deviceID) {
     long *fPixel;
     LONGLONG nImElements, nCubeElements;
     float *qImageArray, *uImageArray;
@@ -241,6 +266,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params) {
     free(qImageArray);
     free(uImageArray);
 
+    /* Compute P cube. Q, U and P will all might not fit in the device
+       global memory. Need a clever way to manage memory and threads. */
+
     return(SUCCESS);
 }
 
@@ -304,4 +332,16 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
         for(i=0; i<nElements; i++)
             d_array[index*nElements+i] = 0.0;
     }
+}
+
+/*************************************************************
+*
+* Estimate the optimal number of block, thread and memory to
+*  compute P from Q and U images/cubes.
+*
+*************************************************************/
+extern "C"
+void getGpuAllocForP(int *blockSize, int *threadSize, int *nImRows, 
+                     int *nRowElements, struct deviceInfoList *gpuList,
+                     int deviceID) {
 }

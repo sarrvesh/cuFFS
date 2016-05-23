@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
     int nDevices;
     int selectedDevice;
     struct deviceInfoList *gpuList;
+    struct deviceInfoList selectedDeviceInfo;
     int i, j, k;
     long *fPixel;
     LONGLONG nElements;
@@ -75,6 +76,10 @@ int main(int argc, char *argv[]) {
     selectedDevice = getBestDevice(gpuList, nDevices);
     cudaSetDevice(selectedDevice);
     checkCudaError();
+
+    /* Copy the device info for the best device */
+    selectedDeviceInfo = copySelectedDeviceInfo(gpuList, selectedDevice);
+    free(gpuList);
     
     /* Open the input files */
     printf("\nINFO: Accessing the input files");
@@ -145,10 +150,9 @@ int main(int argc, char *argv[]) {
     }
     printf("\nINFO: Starting RM Synthesis");
     printf("\nINFO: Processing channel by channel");
-    doRMSynthesis(&inOptions, &params);
+    doRMSynthesis(&inOptions, &params, gpuList, selectedDevice);
 
     /* Free up all allocated memory */
-    free(gpuList);
 
     printf("\n\n");
     return(SUCCESS);
