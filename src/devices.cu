@@ -140,7 +140,7 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 *************************************************************/
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
-                  struct deviceInfoList *gpuList, int deviceID) {
+                  struct deviceInfoList selectedDeviceInfo) {
     long *fPixel;
     LONGLONG nImElements, nCubeElements;
     float *qImageArray, *uImageArray;
@@ -151,6 +151,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int i, j;
     size_t size, imSize, cubeSize;
     int status = 0;
+    int threadSize, blockSize;
+    int nImRows, nRowElements;
+    long nFrames;
 
     /* Copy the phi array to GPU */
     size = sizeof(d_phiAxis)*inOptions->nPhi;
@@ -268,6 +271,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Compute P cube. Q, U and P will all might not fit in the device
        global memory. Need a clever way to manage memory and threads. */
+    nRowElements = params->qAxisLen1;
+    nImRows = params->qAxisLen2 * inOptions->nPhi;
+    getGpuAllocForP(&blockSize, &threadSize, &nFrames, nImRows, nRowElements, 
+                    selectedDeviceInfo);
 
     return(SUCCESS);
 }
@@ -341,7 +348,23 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
 *
 *************************************************************/
 extern "C"
-void getGpuAllocForP(int *blockSize, int *threadSize, int *nImRows, 
-                     int *nRowElements, struct deviceInfoList *gpuList,
-                     int deviceID) {
+void getGpuAllocForP(int *blockSize, int *threadSize, long *nFrames, 
+                     int nImRows, int nRowElements, 
+                     struct deviceInfoList selectedDeviceInfo) {
+    long totalThreads;
+
+    /* How many phi frames can be stored in gpu at a time */
+    *nFrames = (int)(selectedDeviceInfo.globalMem % 
+              (3*nImRows*nRowElements*sizeof(float)));
+    
+    /* Determine the thread and block size */
+    totalThreads = *nFrames;
+    if(totalThreads <= selectedDeviceInfo.maxThreadPerBlock) {
+        *threadSize = totalThreads;
+        *blockSize = 1;
+    }
+    else {
+        *threadSize = selectedDeviceInfo.maxThreadPerBlock;
+        *blockSize = (totalThreads % selectedDeviceInfo.maxThreadPerBlock) + 1;
+    }
 }

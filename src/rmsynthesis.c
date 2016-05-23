@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
     }
     printf("\nINFO: Starting RM Synthesis");
     printf("\nINFO: Processing channel by channel");
-    doRMSynthesis(&inOptions, &params, gpuList, selectedDevice);
+    doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
 
     /* Free up all allocated memory */
 
