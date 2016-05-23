@@ -1,2 +1,3 @@
 * Compile each source file separately with gcc or nvcc and make the corresponding object file. Link everything in the end using nvcc to make the executable. 
 * nvcc used C++ parlance by default while creating the object files. This can cause linker problem when linking a CUDA code with a native C code. This can be overcome by marking all non-CUDA code in .cu file as C using an extern block.
+* gdb does not detect memory leaks; use valgrind instead.
