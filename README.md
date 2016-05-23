@@ -13,7 +13,7 @@ Dependencies
 * [libconfig](http://www.hyperrealm.com/libconfig/)
 * [cfitsio](http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html)
 * [gnuplot](http://www.gnuplot.info/) (Optional)
-* [nvcc](docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/) (You need to install both the NVIDIA driver and the CUDA API toolkit)
+* [nvcc](docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/) (Need both the driver and the toolkit)
 
 Installation
 ============
