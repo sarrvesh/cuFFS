@@ -3,6 +3,7 @@
 Code Status
 ============
 * Currently testing on NVidia GeForce GTX 760
+* Also to be tested by @gheald on Kepler Tesla K20.
 
 Why do we need a GPU version?
 =============================
