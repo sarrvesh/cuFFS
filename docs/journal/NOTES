@@ -1,0 +1,6 @@
+1. The paper can be submitted to A&C under two modes: (i) open access modes where the article is available for free to everyone but the author pays USD 2200 excluding taxes, and (ii) subscription mode where the article is available to subscribers but the authors don't have to pay anything.
+2. Submit the article at https://www.evise.com/evise/faces/pages/navigation/NavController.jspx?JRNL_ACR=ASCOM
+3. Articles should generally be formatted in LaTeX, using the elsarticle.cls class with the 5p documentclass option (in most circumstances this will allow proofs to be produced without rekeying the text), but the article submission system can cope with some other classes. The elsarticletemplate-2-harv.tex template illustrates the use of the class in this mode. This class may already be available in your LaTeX distribution, but if not, it may be obtained, along with its documentation, at http://www.elsevier.com/latex, where you can also find further details about using LaTeX with Elsevier journals.
+4. Code on github should be made public before submitting the paper (i.e.) the referee should be able to download the code and use it.
+5. While referencing journals, use appropriate journal abbreviations: http://www.issn.org/services/online-services/access-to-the-ltwa/
+6. Use elsarticle.cls available at http://www.elsevier.com/latex for typesetting in latex.

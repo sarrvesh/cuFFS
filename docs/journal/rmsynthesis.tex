@@ -1,0 +1,74 @@
+\documentclass[final,authoryear,3p,times]{elsarticle}
+
+\usepackage{ecrc,natbib} 
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{multirow}
+\usepackage{xcolor}
+
+%% set the volume if you know. Otherwise `00'
+\volume{00}
+
+%% set the starting page if not 1
+\firstpage{1}
+
+%% Give the name of the journal
+\journalname{Astronomy and Computing}
+
+%% Give the author list to appear in the running head
+%% Example \runauth{C.V. Radhakrishnan et al.}
+\runauth{Sridhar et al.}
+
+%% Give the abbreviation of the Journal.
+\jid{procs}
+
+%% Give a short journal name for the dummy logo (if needed)
+\jnltitlelogo{Astronomy and computing}
+
+\usepackage{amssymb}
+\usepackage[figuresright]{rotating}
+
+\newcommand\pasp{PASP }
+\newcommand\pasa{PASA }
+\newcommand\apj{Astrophysical Journal }
+\newcommand\aaps{Astronomy and Astrophysics Supplement } 
+\newcommand\aap{Astronomy and Astrophysics} 
+\newcommand\aj{Astronomical Journal }
+\newcommand\mnras{Monthly Notices of Royal Astronomical Society}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{RMSynth: A GPU-accelerated code for Rotation Measure Synthesis.}
+
+\author[kap, ast]{Sarrvesh S. Sridhar}
+\ead{sarrvesh.ss@gmail.com}
+\author[csi, kap]{George Heald}
+
+\address[kap]{Kapteyn Astronomical Institute, University of Groningen, Postbus 800, 9700AV Groningen, The Netherlands.}
+\address[ast]{ASTRON, the Netherlands Institute for Radio Astronomy, Postbus 2, 7990 AA, Dwingeloo, The Netherlands.}
+\address[csi]{csiro}
+
+\begin{abstract}
+Abstract
+\end{abstract}
+
+\begin{keyword}
+one \sep  two  \sep three
+\end{keyword}
+
+\end{frontmatter}
+
+%% main text
+\section{Introduction}
+
+\section{Conclusion}
+
+\section*{Acknowledgements}
+
+\bibliographystyle{model2-names}
+\bibliography{rmsynthesis}
+
+\end{document}
