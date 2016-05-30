@@ -168,7 +168,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
     float *d_phiAxis;
-    float *d_qPhi, *d_uPhi;
+    float *d_quPhi;
     float *qPhi, *uPhi;
     int i, j;
     size_t size, imSize, cubeSize;
@@ -189,13 +189,20 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     imSize = sizeof(float)*nImElements;
     cubeSize = sizeof(float)*nCubeElements;
 
+    /* Allocate memory on device for the input Q and U images */
+    cudaMalloc(&d_qImageArray, imSize);
+    cudaMalloc(&d_uImageArray, imSize);
+    /* Allocate memory for output \phi cube */
+    cudaMalloc(&d_quPhi, cubeSize);
+    checkCudaError();
+
     /**********************************************************
      *                    COMPUTE Q(\PHI)
      **********************************************************/
-    /* Allocate memory for Q(\phi) cube and initialize to 0. */
-    cudaMalloc(&d_qPhi, cubeSize);
+    /* Initialize output cube to 0. */
+    cudaMalloc(&d_quPhi, cubeSize);
     checkCudaError();
-    initializeQU<<<1,inOptions->nPhi>>>(d_qPhi, nImElements, inOptions->nPhi);
+    initializeQU<<<1,inOptions->nPhi>>>(d_quPhi, nImElements, inOptions->nPhi);
     checkCudaError();
     /* Setup fitsio access variables */
     fPixel = (long *)calloc(params->qAxisNum, sizeof(fPixel));
@@ -211,8 +218,6 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
          uImageArray, NULL, &status);
        checkFitsError(status);
        /* Copy the read in channel maps to GPU */
-       cudaMalloc(&d_qImageArray, imSize);
-       cudaMalloc(&d_uImageArray, imSize);
        cudaMemcpy(d_qImageArray, qImageArray, imSize, cudaMemcpyHostToDevice);
        cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
        checkCudaError();
@@ -221,18 +226,14 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           than the number of phi planes. Assume for now that <<<>>> is int and
           not dim3. If this assumption is changed, index computation in
           kernels must be changed */
-       computeQ<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_qPhi,
+       computeQ<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_quPhi,
          d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
          params->lambda20);
        checkCudaError();
-       /* Free the allocated device memory */
-       cudaFree(d_qImageArray);
-       cudaFree(d_uImageArray);
     }
     /* Move the computed Q(phi) to host */
     qPhi = (float *)calloc(nCubeElements, sizeof(qPhi));
-    cudaMemcpy(qPhi, d_qPhi, cubeSize, cudaMemcpyDeviceToHost);
-    cudaFree(d_qPhi);
+    cudaMemcpy(qPhi, d_quPhi, cubeSize, cudaMemcpyDeviceToHost);
     checkCudaError();
     /* Write the Q cube to disk */
     writePolCubeToDisk(qPhi, DIRTY_Q, inOptions, params);
@@ -241,16 +242,12 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     /**********************************************************
      *                    COMPUTE U(\PHI)
      **********************************************************/
-    /* Allocate memory for U(\phi) cube and initialize to 0. */
-    cudaMalloc(&d_uPhi, cubeSize);
-    checkCudaError();
-    initializeQU<<<1,inOptions->nPhi>>>(d_uPhi, nImElements, inOptions->nPhi);
+    /* Initialize output cube to 0. */
+    initializeQU<<<1,inOptions->nPhi>>>(d_quPhi, nImElements, inOptions->nPhi);
     checkCudaError();
     /* Setup fitsio access variables */
     fPixel = (long *)calloc(params->qAxisNum, sizeof(fPixel));
     for(i=1; i<=params->qAxisNum; i++) { fPixel[i-1] = 1; }
-    qImageArray = (float *)calloc(nImElements, sizeof(qImageArray));
-    uImageArray = (float *)calloc(nImElements, sizeof(uImageArray));
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
        fPixel[2] = j;
@@ -260,31 +257,28 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                      uImageArray, NULL, &status);
        checkFitsError(status);
        /* Copy the read in channel maps to GPU */
-       cudaMalloc(&d_qImageArray, imSize);
-       cudaMalloc(&d_uImageArray, imSize);
        cudaMemcpy(d_qImageArray, qImageArray, imSize, cudaMemcpyHostToDevice);
        cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
        checkCudaError();
        /* Launch kernels to do RM Synthesis */
-       computeU<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_uPhi, 
+       computeU<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_quPhi, 
                                        d_phiAxis, inOptions->nPhi, nImElements, 
                                        params->lambda2[j-1], params->lambda20);
        checkCudaError();
-       /* Free the allocatd device memory */
-       cudaFree(d_qImageArray);
-       cudaFree(d_uImageArray);
     }
     /* Move the computed U(phi) to host */
     uPhi = (float *)calloc(nCubeElements, sizeof(uPhi));
-    cudaMemcpy(uPhi, d_uPhi, cubeSize, cudaMemcpyDeviceToHost);
-    cudaFree(d_uPhi);
+    cudaMemcpy(uPhi, d_quPhi, cubeSize, cudaMemcpyDeviceToHost);
     checkCudaError();
     /* Write the U cube to disk */
     writePolCubeToDisk(uPhi, DIRTY_U, inOptions, params);
     free(uPhi);
 
     /* Free remaining allocated mem on device */
+    cudaFree(d_quPhi);
     cudaFree(d_phiAxis);
+    cudaFree(d_qImageArray);
+    cudaFree(d_uImageArray);
 
     /* Free remaining allocated mem on host */
     free(fPixel);
