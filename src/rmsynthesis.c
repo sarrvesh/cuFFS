@@ -148,9 +148,9 @@ int main(int argc, char *argv[]) {
            sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*
            inOptions.nPhi/MEGA);
     printf("\nINFO: Available memory on GPU: %0.3f MiB", 
-           gpuList[selectedDevice].globalMem/MEGA);
+           selectedDeviceInfo.globalMem/MEGA);
     if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi >
-       gpuList[selectedDevice].globalMem) {
+       selectedDeviceInfo.globalMem) {
         printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
         return(FAILURE);
     }
