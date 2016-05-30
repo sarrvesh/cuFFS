@@ -30,3 +30,11 @@
 
 # Debug files
 *.dSYM/
+
+# Latex files
+*.bbl
+*.log
+*.blg
+*.spl
+*.aux
+sample/
