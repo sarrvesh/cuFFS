@@ -1,14 +1,23 @@
 /******************************************************************************
+rmsynthesis.c: A GPU based implementation of RM Synthesis.
+Copyright (C) 2016  {fullname}
 
-A GPU Based implementation of RM Synthesis
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
 
-Version: 0.1
-Last edited: March 31, 2016
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-Version history:
-================
-v0.1    Assume FITS cubes have at least 3 frames with frequency being the 
-         3rd axis. Also, implicitly assumes each freq channel has equal weight.
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+Correspondence concerning RMSynth_GPU should be addressed to: 
+sarrvesh.ss@gmail.com
 
 ******************************************************************************/
 
