@@ -1,3 +1,7 @@
 * Compile each source file separately with gcc or nvcc and make the corresponding object file. Link everything in the end using nvcc to make the executable. 
 * nvcc used C++ parlance by default while creating the object files. This can cause linker problem when linking a CUDA code with a native C code. This can be overcome by marking all non-CUDA code in .cu file as C using an extern block.
 * gdb does not detect memory leaks; use valgrind instead.
+* Host to device data transfer is quite slow and can degrade the overall performance of the code significantly. It is best to MINIMIZE the amount of data transfer betweeh the host and the gpu.
+* While transferring data from host to device, make sure that the host memory was allocated with cudaMallocHost or cudaHostAlloc instead of malloc/calloc. The cuda functions create a "pinned" or page aligned block which can improve transfer speed. Note however that the max size that can be allocated is fixed by the RAM size.
+* A good GPU code should try to maximize the ratio of device processing to data transfer time.
+* Asynchronous data transfer can also help improve transfer efficiency.
