@@ -13,6 +13,7 @@ v0.1    Assume FITS cubes have at least 3 frames with frequency being the
 ******************************************************************************/
 
 #include<stdio.h>
+#include<time.h>
 
 #include "structures.h"
 #include "constants.h"
@@ -43,6 +44,11 @@ int main(int argc, char *argv[]) {
     LONGLONG nElements;
     float *qImageArray, *uImageArray;
     size_t size;
+    clock_t startTime, endTime;
+    double cpuTime;
+    
+    /* Start the clock */
+    startTime = clock();
 
     /* Device variable declaration */
     float *d_qImageArray, *d_uImageArray;
@@ -153,7 +159,11 @@ int main(int argc, char *argv[]) {
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
 
     /* Free up all allocated memory */
-
+    
+    /* Estimate the execution time */
+    endTime = clock();
+    cpuTime = (double)(endTime - startTime)/CLOCKS_PER_SEC;
+    printf("\nINFO: Total CPU time: %lf minutes", cpuTime/SEC_PER_MIN);
     printf("\n\n");
     return(SUCCESS);
 }
