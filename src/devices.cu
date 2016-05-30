@@ -35,6 +35,8 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
                          int nElements, float lambda2, float lambda20);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
+void getGpuAllocForRMSynth(int *blockSize, int *threadSize,
+                           struct deviceInfoList selectedDeviceInfo);
 }
 
 /*************************************************************
@@ -216,6 +218,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     for(i=1; i<=params->qAxisNum; i++) { fPixel[i-1] = 1; }
     qImageArray = (float *)calloc(nImElements, sizeof(qImageArray));
     uImageArray = (float *)calloc(nImElements, sizeof(uImageArray));
+
+    /* Get the optimal thread and block size */
+    getGpuAllocForRMSynth(&blockSize, &threadSize, selectedDeviceInfo);
+
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
        fPixel[2] = j;
@@ -229,15 +235,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
        checkCudaError();
        /* Launch kernels to do RM Synthesis */
-       /* Note that the number of threads launched MUST BE EQUAL TO OR GREATER
-          than the number of phi planes. Assume for now that <<<>>> is int and
-          not dim3. If this assumption is changed, index computation in
-          kernels must be changed */
-       printf("INFO: Processing channel %d/%d", j, params->qAxisLen3);
-       computeQ<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_qPhi,
+       computeQ<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_qPhi,
          d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
          params->lambda20);
-       computeU<<<1,inOptions->nPhi>>>(d_qImageArray, d_uImageArray, d_uPhi,
+       computeU<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_uPhi,
          d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
          params->lambda20);
        checkCudaError();
@@ -294,7 +295,7 @@ __global__ void computeQ(float *d_qImageArray, float *d_uImageArray,
 
     if(index < nPhi) {
         /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
-        for(i=0; i<nElements; i++) 
+        for(i=0; i<nElements; i++)
             d_qPhi[index*nElements+i] += d_qImageArray[i]*thisCos - 
                                          d_uImageArray[i]*thisSin;
     }
@@ -337,6 +338,19 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
         for(i=0; i<nElements; i++)
             d_array[index*nElements+i] = 0.0;
     }
+}
+
+/*************************************************************
+*
+* Estimate the optimal number of block and thread size 
+*  for RM Synthesis
+*
+*************************************************************/
+extern "C"
+void getGpuAllocForRMSynth(int *blockSize, int *threadSize,
+                           struct deviceInfoList selectedDeviceInfo) {
+    *blockSize = 18;
+    *threadSize = 32;
 }
 
 /*************************************************************
