@@ -197,7 +197,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     
     /* Check if output fits inside GPU memory */
     printf("INFO: Size of input Q/U channel: %0.3f kiB\n", imSize/KILO);
-    printf("INFO: Size of output Q and U cube: %0.3f MiB\n", cubeSize*2.0f/MEGA);
+    printf("INFO: Size of output Q and U cube: %0.3f MiB\n", 2.0*cubeSize/MEGA);
     printf("INFO: Available memory on GPU: %0.3f MiB\n", 
            selectedDeviceInfo.globalMem/MEGA);
     if(selectedDeviceInfo.globalMem < cubeSize) {
