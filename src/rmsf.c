@@ -107,7 +107,7 @@ int writeRMSF(struct optionsList inOptions, struct parList params) {
     
     /* Open a text file */
     sprintf(filename, "%srmsf.txt", inOptions.outPrefix);
-    printf("\nINFO: Writing RMSF to %s", filename);
+    printf("INFO: Writing RMSF to %s\n", filename);
     rmsf = fopen(filename, FILE_READWRITE);
     if(rmsf == NULL)
         return(FAILURE);

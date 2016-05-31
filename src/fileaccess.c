@@ -34,7 +34,7 @@ sarrvesh.ss@gmail.com
 *************************************************************/
 void checkFitsError(int status) {
     if(status) {
-        printf("\nERROR:");
+        printf("ERROR:");
         fits_report_error(stdout, status);
         printf("\n");
         exit(FAILURE);
@@ -100,26 +100,26 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     
     params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
     if(params->freqList == NULL) {
-        printf("\nError: Mem alloc failed while reading in frequency list\n\n");
+        printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     for(i=0; i<params->qAxisLen3; i++) {
         fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
-            printf("\nError: Frequency values and fits frames don't match\n");
+            printf("Error: Frequency values and fits frames don't match\n");
             return(FAILURE);
         }
     }
     fscanf(params->freq, "%f", &tempFloat);
     if(! feof(params->freq)) {
-        printf("\nError: More frequency values present than fits frames\n\n");
+        printf("Error: More frequency values present than fits frames\n\n");
         return(FAILURE);
     }
     
     /* Compute \lambda^2 from the list of generated frequencies */
     params->lambda2  = calloc(params->qAxisLen3, sizeof(params->lambda2));
     if(params->lambda2 == NULL) {
-        printf("\nError: Mem alloc failed while reading in frequency list\n\n");
+        printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     params->lambda20 = 0.0;

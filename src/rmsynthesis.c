@@ -62,23 +62,24 @@ int main(int argc, char *argv[]) {
     /* Device variable declaration */
     float *d_qImageArray, *d_uImageArray;
     
-    printf("\nRM Synthesis v%s", VERSION_STR);
-    printf("\nWritten by Sarrvesh S. Sridhar\n");
+    printf("\n");
+    printf("RM Synthesis v%s\n", VERSION_STR);
+    printf("Written by Sarrvesh S. Sridhar\n");
     
     /* Verify command line input */
     if(argc!=NUM_INPUTS) {
-        printf("\nERROR: Invalid command line input. Terminating Execution!");
-        printf("\nUsage: %s <parset filename>\n\n", argv[0]);
+        printf("ERROR: Invalid command line input. Terminating Execution!\n");
+        printf("Usage: %s <parset filename>\n\n", argv[0]);
         return(FAILURE);
     } 
     if(strcmp(parsetFileName, "-h") == 0) {
         /* Print help and exit */
-        printf("\nUsage: %s <parset filename>\n\n", argv[0]);
+        printf("Usage: %s <parset filename>\n\n", argv[0]);
         return(SUCCESS);
     }
     
     /* Parse the input file */
-    printf("\nINFO: Parsing input file %s", parsetFileName);
+    printf("INFO: Parsing input file %s\n", parsetFileName);
     inOptions = parseInput(parsetFileName);
     
     /* Print parset input options to screen */
@@ -97,8 +98,8 @@ int main(int argc, char *argv[]) {
     free(gpuList);
     
     /* Open the input files */
-    printf("\nINFO: Accessing the input files");
-    printf("\nWARN: Assuming NAXIS3 is the frequency axis");
+    printf("INFO: Accessing the input files\n");
+    printf("WARN: Assuming NAXIS3 is the frequency axis\n");
     fitsStatus = SUCCESS;
     puts(inOptions.qCubeName);
     fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
@@ -106,11 +107,11 @@ int main(int argc, char *argv[]) {
     checkFitsError(fitsStatus);
     params.freq = fopen(inOptions.freqFileName, FILE_READONLY);
     if(params.freq == NULL) {
-        printf("\nError: Unable to open the frequency file\n\n");
+        printf("Error: Unable to open the frequency file\n\n");
         return(FAILURE);
     }
     if(inOptions.isImageMaskDefined == TRUE) {
-        printf("\nINFO: Accessing the input mask %s", inOptions.imageMask);
+        printf("INFO: Accessing the input mask %s", inOptions.imageMask);
         fitsStatus = SUCCESS;
         fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, 
                        &fitsStatus);
@@ -129,29 +130,29 @@ int main(int argc, char *argv[]) {
     getMedianLambda20(&params);
     
     /* Generate RMSF */
-    printf("\nINFO: Computing RMSF");
+    printf("INFO: Computing RMSF\n");
     if(generateRMSF(&inOptions, &params)) {
-        printf("\nError: Mem alloc failed while generating RMSF");
+        printf("Error: Mem alloc failed while generating RMSF\n");
         return(FAILURE);
     }    
     /* Write RMSF to disk */
     if(writeRMSF(inOptions, params)) {
-        printf("\nError: Unable to write RMSF to disk\n\n");
+        printf("Error: Unable to write RMSF to disk\n\n");
         return(FAILURE);
     }
     /* Plot RMSF */
     #ifdef GNUPLOT_ENABLE
     if(inOptions.plotRMSF == TRUE) {
-        printf("\nINFO: Plotting RMSF with gnuplot");
+        printf("INFO: Plotting RMSF with gnuplot\n");
         if(plotRMSF(inOptions)) {
-            printf("\nError: Unable to plot RMSF\n\n");
+            printf("Error: Unable to plot RMSF\n\n");
             return(FAILURE);
         }
     }
     #endif
     
     /* Start RM Synthesis */
-    printf("\nINFO: Starting RM Synthesis");
+    printf("INFO: Starting RM Synthesis\n");
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
 
     /* Free up all allocated memory */
@@ -159,7 +160,7 @@ int main(int argc, char *argv[]) {
     /* Estimate the execution time */
     endTime = clock();
     cpuTime = (double)(endTime - startTime)/CLOCKS_PER_SEC;
-    printf("\nINFO: Total CPU time: %lf minutes", cpuTime/SEC_PER_MIN);
-    printf("\n\n");
+    printf("INFO: Total CPU time: %lf minutes\n", cpuTime/SEC_PER_MIN);
+    printf("\n");
     return(SUCCESS);
 }

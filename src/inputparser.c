@@ -42,7 +42,7 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Read in the configuration file */
     if(!config_read_file(&cfg, parsetFileName)) {
-        printf("\nError: Error reading parset file. %s\n\n", 
+        printf("Error: Error reading parset file. %s\n\n", 
                config_error_text(&cfg));
         config_destroy(&cfg);
         exit(FAILURE);
@@ -54,7 +54,7 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.qCubeName, str);
     }
     else {
-        printf("\nError: 'qCubeName' undefined in parset");
+        printf("Error: 'qCubeName' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
@@ -63,7 +63,7 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.uCubeName, str);
     }
     else {
-        printf("\nError: 'uCubeName' undefined in parset");
+        printf("Error: 'uCubeName' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
@@ -74,14 +74,14 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.freqFileName, str);
     }
     else {
-        printf("\nError: 'freqFileName' undefined in parset");
+        printf("Error: 'freqFileName' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
 
     /* Check if an image mask is defined */
     if(! config_lookup_string(&cfg, "imageMask", &str)) {
-        printf("\nINFO: Image mask not specified");
+        printf("INFO: Image mask not specified\n\n");
         inOptions.isImageMaskDefined = FALSE;
     }
     else {
@@ -96,7 +96,7 @@ struct optionsList parseInput(char *parsetFileName) {
         strcpy(inOptions.outPrefix, str);
     }
     else {
-        printf("\nINFO: 'outPrefix' is not defined. Defaulting to %s", 
+        printf("INFO: 'outPrefix' is not defined. Defaulting to %s\n\n", 
                 DEFAULT_OUT_PREFIX);
         inOptions.outPrefix = malloc(strlen(DEFAULT_OUT_PREFIX));
         strcpy(inOptions.outPrefix, DEFAULT_OUT_PREFIX);
@@ -104,22 +104,22 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Get Faraday depth */
     if(! config_lookup_float(&cfg, "phiMin", &inOptions.phiMin)) {
-        printf("\nError: 'phiMin' undefined in parset");
+        printf("Error: 'phiMin' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
     if(! config_lookup_float(&cfg, "dPhi", &inOptions.dPhi)) {
-        printf("\nError: 'dPhi' undefined in parset");
+        printf("Error: 'dPhi' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
     if(! config_lookup_int(&cfg, "nPhi", &inOptions.nPhi)) {
-        printf("\nError: 'nPhi' undefined in parset");
+        printf("Error: 'nPhi' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
     if(! config_lookup_bool(&cfg, "plotRMSF", &inOptions.plotRMSF)) {
-        printf("\nINFO: 'plotRMSF' undefined in parset");
+        printf("INFO: 'plotRMSF' undefined in parset\n");
         inOptions.plotRMSF = FALSE;
     }
     
@@ -138,17 +138,16 @@ void printOptions(struct optionsList inOptions) {
     printf("\n");
     for(i=0; i<SCREEN_WIDTH; i++) { printf("#"); }
     printf("\n");
-    printf("\nQ Cube: %s", inOptions.qCubeName);
-    printf("\nU Cube: %s", inOptions.uCubeName);
-    printf("\n");
+    printf("Q Cube: %s\n", inOptions.qCubeName);
+    printf("U Cube: %s\n", inOptions.uCubeName);
     if(inOptions.isImageMaskDefined == TRUE) {
-        printf("\nImage mask: %s\n", inOptions.imageMask);
+        printf("Image mask: %s\n", inOptions.imageMask);
         printf("\n");
     }
-    printf("\nphi min: %.2f", inOptions.phiMin);
-    printf("\n# of phi planes: %d", inOptions.nPhi);
-    printf("\ndelta phi: %.2lf", inOptions.dPhi);
-    printf("\n\n");
+    printf("phi min: %.2f\n", inOptions.phiMin);
+    printf("# of phi planes: %d\n", inOptions.nPhi);
+    printf("delta phi: %.2lf\n", inOptions.dPhi);
+    printf("\n");
     for(i=0; i<SCREEN_WIDTH; i++) { printf("#"); }
     printf("\n");
 }

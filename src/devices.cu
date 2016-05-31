@@ -196,12 +196,12 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cubeSize = sizeof(float)*nCubeElements;
     
     /* Check if output fits inside GPU memory */
-    printf("\nINFO: Size of input Q/U channel: %0.3f kiB", imSize/KILO);
-    printf("\nINFO: Size of output Q and U cube: %0.3f MiB", cubeSize*2.0f);
-    printf("\nINFO: Available memory on GPU: %0.3f MiB", 
+    printf("INFO: Size of input Q/U channel: %0.3f kiB\n", imSize/KILO);
+    printf("INFO: Size of output Q and U cube: %0.3f MiB\n", cubeSize*2.0f/MEGA);
+    printf("INFO: Available memory on GPU: %0.3f MiB\n", 
            selectedDeviceInfo.globalMem/MEGA);
     if(selectedDeviceInfo.globalMem < cubeSize) {
-        printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
+        printf("ERROR: Insufficient memory on device! Try reducing nPhi\n\n");
         return(FAILURE);
     }
     
