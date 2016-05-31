@@ -236,6 +236,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     /* Get the optimal thread and block size */
     getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi, 
                           selectedDeviceInfo);
+    printf("\nINFO: Launching kernels with %d blocks with %d threads each",
+           blockSize, threadSize);
 
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
