@@ -35,7 +35,7 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
                          int nElements, float lambda2, float lambda20);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
-void getGpuAllocForRMSynth(int *blockSize, int *threadSize,
+void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo);
 }
 
@@ -94,6 +94,8 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
         gpuList[dev].threadBlockSize[0] = deviceProp.maxThreadsDim[0];
         gpuList[dev].threadBlockSize[1] = deviceProp.maxThreadsDim[1];
         gpuList[dev].threadBlockSize[2] = deviceProp.maxThreadsDim[2];
+        gpuList[dev].warpSize           = deviceProp.warpSize;
+        gpuList[dev].nSM                = deviceProp.multiProcessorCount;
         /* Print device info */
         printf("\nDevice %d: %s (version: %d.%d)", dev, deviceProp.name, 
                                                         deviceProp.major, 
@@ -154,6 +156,8 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
     selectedDeviceInfo.threadBlockSize[0] = gpuList[i].threadBlockSize[0];
     selectedDeviceInfo.threadBlockSize[1] = gpuList[i].threadBlockSize[1];
     selectedDeviceInfo.threadBlockSize[2] = gpuList[i].threadBlockSize[2];
+    selectedDeviceInfo.warpSize           = gpuList[i].warpSize;
+    selectedDeviceInfo.nSM                = gpuList[i].nSM;
     return selectedDeviceInfo;
 }
 
@@ -177,7 +181,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int status = 0;
     int threadSize, blockSize;
     int nImRows, nRowElements;
-    long nFrames;
+    long nFrames;    
 
     /* Copy the phi array to GPU */
     size = sizeof(d_phiAxis)*inOptions->nPhi;
@@ -190,7 +194,17 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     nCubeElements = params->qAxisLen1*params->qAxisLen2*inOptions->nPhi;
     imSize = sizeof(float)*nImElements;
     cubeSize = sizeof(float)*nCubeElements;
-
+    
+    /* Check if output fits inside GPU memory */
+    printf("\nINFO: Size of input Q/U channel: %0.3f kiB", imSize/KILO);
+    printf("\nINFO: Size of output Q and U cube: %0.3f MiB", cubeSize*2.0f);
+    printf("\nINFO: Available memory on GPU: %0.3f MiB", 
+           selectedDeviceInfo.globalMem/MEGA);
+    if(selectedDeviceInfo.globalMem < cubeSize) {
+        printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
+        return(FAILURE);
+    }
+    
     /* Allocate memory on device for the input Q and U images */
     cudaMalloc(&d_qImageArray, imSize);
     cudaMalloc(&d_uImageArray, imSize);
@@ -220,7 +234,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     uImageArray = (float *)calloc(nImElements, sizeof(uImageArray));
 
     /* Get the optimal thread and block size */
-    getGpuAllocForRMSynth(&blockSize, &threadSize, selectedDeviceInfo);
+    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi, 
+                          selectedDeviceInfo);
 
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
@@ -343,14 +358,24 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
 /*************************************************************
 *
 * Estimate the optimal number of block and thread size 
-*  for RM Synthesis
+*  for RM Synthesis.
+* Conditions:
+*    1. # of kernel calls should be equal to or greater than nPhi
+*    2. For good occupancy, thread and block sizes should be integer 
+*       multiples of warp size and # of SMs.
+*    3. Each kernel takes care of a single phi plane.
+*    ==> minimize threadSize*blockSize - nPhi
+*    ==> min(M*nSM*N*warpSize - nPhi) such that M \geq N
 *
 *************************************************************/
 extern "C"
-void getGpuAllocForRMSynth(int *blockSize, int *threadSize,
+void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
-    *blockSize = 18;
-    *threadSize = 32;
+    int M, N;
+    N = 1;
+    M = nPhi/(N*selectedDeviceInfo.warpSize) + 1;
+    *blockSize = M*selectedDeviceInfo.nSM;
+    *threadSize = N*selectedDeviceInfo.warpSize;
 }
 
 /*************************************************************

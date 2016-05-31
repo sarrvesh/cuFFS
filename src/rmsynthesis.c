@@ -150,21 +150,8 @@ int main(int argc, char *argv[]) {
     }
     #endif
     
-    /* Now that everything is set, do some memory checks */ 
-    printf("\nINFO: Size of input Q/U channel: %0.3f KiB", 
-           sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2/KILO);
-    printf("\nINFO: Size of output Q/U cube: %0.3f MiB",
-           sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*
-           inOptions.nPhi/MEGA);
-    printf("\nINFO: Available memory on GPU: %0.3f MiB", 
-           selectedDeviceInfo.globalMem/MEGA);
-    if(sizeof(qImageArray)*params.qAxisLen1*params.qAxisLen2*inOptions.nPhi >
-       selectedDeviceInfo.globalMem) {
-        printf("\nERROR: Insufficient memory on device! Try reducing nPhi\n\n");
-        return(FAILURE);
-    }
+    /* Start RM Synthesis */
     printf("\nINFO: Starting RM Synthesis");
-    printf("\nINFO: Processing channel by channel");
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
 
     /* Free up all allocated memory */

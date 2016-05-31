@@ -73,4 +73,6 @@ struct deviceInfoList {
     int maxThreadPerMP;
     int maxThreadPerBlock;
     int threadBlockSize[N_DIMS];
+    int warpSize;
+    int nSM;
 };
