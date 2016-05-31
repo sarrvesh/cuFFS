@@ -181,7 +181,13 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int status = 0;
     int threadSize, blockSize;
     int nImRows, nRowElements;
-    long nFrames;    
+    long nFrames;
+    
+    /* Initialize CUDA events to measure time */
+    cudaEvent_t startEvent, stopEvent;
+    float millisec = 0.;
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
 
     /* Copy the phi array to GPU */
     size = sizeof(d_phiAxis)*inOptions->nPhi;
@@ -252,6 +258,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
        checkCudaError();
        /* Launch kernels to do RM Synthesis */
+       cudaEventRecord(startEvent);
        computeQ<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_qPhi,
          d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
          params->lambda20);
@@ -259,6 +266,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
          d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
          params->lambda20);
        checkCudaError();
+       cudaEventRecord(stopEvent);
+       cudaEventSynchronize(stopEvent);
+       cudaEventElapsedTime(&millisec, startEvent, stopEvent);
+       printf("INFO: Finished channel %d/%d. Time elapsed: %0.3f ms.\n", j, params->qAxisLen3, millisec);
     }
     
     /* Move the computed Q(phi) to host */
@@ -361,23 +372,14 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
 *
 * Estimate the optimal number of block and thread size 
 *  for RM Synthesis.
-* Conditions:
-*    1. # of kernel calls should be equal to or greater than nPhi
-*    2. For good occupancy, thread and block sizes should be integer 
-*       multiples of warp size and # of SMs.
-*    3. Each kernel takes care of a single phi plane.
-*    ==> minimize threadSize*blockSize - nPhi
-*    ==> min(M*nSM*N*warpSize - nPhi) such that M \geq N
 *
 *************************************************************/
 extern "C"
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
-    int M, N;
-    N = 1;
-    M = nPhi/(N*selectedDeviceInfo.warpSize) + 1;
-    *blockSize = M*selectedDeviceInfo.nSM;
-    *threadSize = N*selectedDeviceInfo.warpSize;
+    
+    *blockSize = nPhi/selectedDeviceInfo.nSM + 1;
+    *threadSize = selectedDeviceInfo.nSM;
 }
 
 /*************************************************************
