@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
     /* Estimate the execution time */
     endTime = clock();
     cpuTime = (double)(endTime - startTime)/CLOCKS_PER_SEC;
-    printf("INFO: Total CPU time: %0.3ff minutes\n", cpuTime/SEC_PER_MIN);
+    printf("INFO: Total CPU time: %0.3f minutes\n", cpuTime/SEC_PER_MIN);
     printf("\n");
     return(SUCCESS);
 }
