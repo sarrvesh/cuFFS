@@ -29,10 +29,10 @@ extern "C" {
 #include "fileaccess.h"
 __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
                          float *d_qPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float lambda2, float lambda20);
+                         int nElements, float dlambda2);
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float lambda2, float lambda20);
+                         int nElements, float dlambda2);
 __global__ void initializeQU(float *d_array, int nElements, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
@@ -182,6 +182,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int threadSize, blockSize;
     int nImRows, nRowElements;
     long nFrames;
+    float dLambda2;
     
     /* Initialize CUDA events to measure time */
     cudaEvent_t startEvent, stopEvent;
@@ -259,12 +260,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        checkCudaError();
        /* Launch kernels to do RM Synthesis */
        cudaEventRecord(startEvent);
+       dLambda2 = params->lambda2[j-1] - params->lambda20;
        computeQ<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_qPhi,
-         d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
-         params->lambda20);
+         d_phiAxis, inOptions->nPhi, nImElements, dLambda2);
        computeU<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_uPhi,
-         d_phiAxis, inOptions->nPhi, nImElements, params->lambda2[j-1], 
-         params->lambda20);
+         d_phiAxis, inOptions->nPhi, nImElements, dLambda2);
        checkCudaError();
        cudaEventRecord(stopEvent);
        cudaEventSynchronize(stopEvent);
@@ -314,12 +314,12 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 extern "C"
 __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
                          float *d_qPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float lambda2, float lambda20) {
+                         int nElements, float dlambda2) {
     int i;
     int index = blockIdx.x*blockDim.x + threadIdx.x;
     float thisPhi = d_phiAxis[index];    
-    float thisCos = cosf(2*thisPhi*(lambda2-lambda20));
-    float thisSin = sinf(2*thisPhi*(lambda2-lambda20));
+    float thisCos = cosf(2*thisPhi*dlambda2);
+    float thisSin = sinf(2*thisPhi*dlambda2);
 
     if(index < nPhi) {
         /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
@@ -337,12 +337,12 @@ __global__ void computeQ(float *d_qImageArray, float *d_uImageArray,
 extern "C"
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float lambda2, float lambda20) {
+                         int nElements, float dlambda2) {
     int i;
     int index = blockIdx.x*blockDim.x + threadIdx.x;
     float thisPhi = d_phiAxis[index];
-    float thisCos = cosf(2*thisPhi*(lambda2-lambda20));
-    float thisSin = sinf(2*thisPhi*(lambda2-lambda20));
+    float thisCos = cosf(2*thisPhi*dlambda2);
+    float thisSin = sinf(2*thisPhi*dlambda2);
 
     if(index < nPhi) {
         /* For each element in U, compute U(thisPhi) and add it to U(phi) */
@@ -378,8 +378,8 @@ extern "C"
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
     
-    *blockSize = nPhi/selectedDeviceInfo.nSM + 1;
-    *threadSize = selectedDeviceInfo.nSM;
+    *blockSize = nPhi/5.0 + 1;
+    *threadSize = 5.0;
 }
 
 /*************************************************************
