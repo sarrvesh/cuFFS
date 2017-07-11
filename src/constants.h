@@ -56,6 +56,7 @@ extern "C"
 #define LIGHTSPEED 299792458.
 #define KILO       1000.
 #define MEGA       1000000.
-#define SEC_PER_MIN 60.
+#define SEC_PER_MIN 60
+#define SEC_PER_HOUR 3600
 
 #endif

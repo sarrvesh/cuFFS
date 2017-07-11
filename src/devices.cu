@@ -213,6 +213,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     }
     
     /* Allocate memory on device for the input Q and U images */
+    printf("INFO: Trying to copy data to device\n");
     cudaMalloc(&d_qImageArray, imSize);
     cudaMalloc(&d_uImageArray, imSize);
     checkCudaError();
@@ -378,8 +379,8 @@ extern "C"
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
     
-    *blockSize = nPhi/5.0 + 1;
-    *threadSize = 5.0;
+    *blockSize = nPhi/1.0 + 1;
+    *threadSize = 1.0;
 }
 
 /*************************************************************
