@@ -30,6 +30,6 @@ extern "C"
 #define VERSION_STR      "0.1"
 #define VERSION_MAJOR    0
 #define VERSION_MINOR    1
-#define VERSION_DATE_STR "2016-05-21"
+#define VERSION_DATE_STR "2017-07-11"
 
 #endif
