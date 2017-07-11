@@ -22,18 +22,18 @@ else
 fi
 
 printf "Compiling devices.cu\n"
-nvcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/devices.cu -gencode $NVCC_FLAGS
+nvcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/devices.cu -gencode $NVCC_FLAGS
 
 printf "Compiling fileaccess.c\n"
-gcc -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/fileaccess.c 
+gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/fileaccess.c 
 
 printf "Compiling inputparser.c\n"
-gcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/inputparser.c 
+gcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/inputparser.c 
 
 printf "Compiling rmsf.c\n"
-gcc -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rmsf.c 
+gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rmsf.c 
 
 printf "Compiling rmsynthesis.c\n"
-gcc -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c 
+gcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c 
 
-nvcc -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -gencode $NVCC_FLAGS
+nvcc -O3 -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -gencode $NVCC_FLAGS

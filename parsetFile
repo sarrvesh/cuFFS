@@ -1,16 +1,16 @@
 // Define how fits files are stored on disk
-qCubeName = "N6946/cube-Q.fits";
-uCubeName = "N6946/cube-U.fits";
-freqFileName = "N6946/frequencies-Q.txt";
+qCubeName = "/data/see041/wsrt_sings/cube-Q.fits";
+uCubeName = "/data/see041/wsrt_sings/cube-U.fits";
+freqFileName = "/data/see041/wsrt_sings/frequencies-Q.txt";
 
 // Define an image mask to select pixels
 //imageMask = "testFiles/MASK.fits";
 
 // Define the faraday depth axis. All units in rad/m/m
-//plotRMSF = True;
+plotRMSF = False;
 phiMin = -500.;
 nPhi = 401; // integer
-dPhi = 1.;
+dPhi = 2.5;
 
 // Prefix for output filenames
 outPrefix = "trial1";
