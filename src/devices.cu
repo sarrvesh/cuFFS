@@ -223,10 +223,21 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaMalloc(&d_uPhi, cubeSize);
     checkCudaError();
 
+    /* Get the optimal thread and block size */
+    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi,
+                          selectedDeviceInfo);
+    printf("\nINFO: Will launch kernels with %d blocks %d threads each\n",
+           blockSize, threadSize);
+
     /* Initialize output cubes to 0. */
-    initializeQU<<<1,inOptions->nPhi>>>(d_qPhi, nImElements, inOptions->nPhi);
-    initializeQU<<<1,inOptions->nPhi>>>(d_uPhi, nImElements, inOptions->nPhi);
+    cudaEventRecord(startEvent);
+    initializeQU<<<blockSize, threadSize>>>(d_qPhi, nImElements, inOptions->nPhi);
+    initializeQU<<<blockSize, threadSize>>>(d_uPhi, nImElements, inOptions->nPhi);
     checkCudaError();
+    cudaEventRecord(stopEvent);
+    cudaEventSynchronize(stopEvent);
+    cudaEventElapsedTime(&millisec, startEvent, stopEvent);
+    printf("INFO: Time for initializing host arrays %0.2f ms.\n", millisec);
     
     /* Allocate memory for output cube */
     qPhi = (float *)calloc(nCubeElements, sizeof(qPhi));
@@ -240,12 +251,6 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     for(i=1; i<=params->qAxisNum; i++) { fPixel[i-1] = 1; }
     qImageArray = (float *)calloc(nImElements, sizeof(qImageArray));
     uImageArray = (float *)calloc(nImElements, sizeof(uImageArray));
-
-    /* Get the optimal thread and block size */
-    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi, 
-                          selectedDeviceInfo);
-    printf("\nINFO: Launching kernels with %d blocks with %d threads each\n",
-           blockSize, threadSize);
 
     for(j=1; j<=params->qAxisLen3; j++) {
        /* Read in this Q and U channel */
@@ -378,9 +383,11 @@ __global__ void initializeQU(float *d_array, int nElements, int nPhi) {
 extern "C"
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
-    
-    *blockSize = nPhi/1.0 + 1;
-    *threadSize = 1.0;
+    *blockSize = selectedDeviceInfo.maxThreadPerBlock;
+    if(nPhi < *blockSize)
+        *threadSize = 1;
+    else
+        *threadSize = (int) nPhi/(*blockSize) + 1;
 }
 
 /*************************************************************
