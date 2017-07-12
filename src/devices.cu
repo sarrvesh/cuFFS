@@ -321,7 +321,7 @@ extern "C"
 __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
                          float *d_qPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float dlambda2) {
-    __shared__ int i;
+    int i;
     const int index = blockIdx.x*blockDim.x + threadIdx.x;
     const int offset = index*nElements;
     const float thisPhi = d_phiAxis[index];    
@@ -345,7 +345,7 @@ extern "C"
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float dlambda2) {
-    __shared__ int i;
+    int i;
     const int index = blockIdx.x*blockDim.x + threadIdx.x;
     const int offset = index*nElements;
     const float thisPhi = d_phiAxis[index];
