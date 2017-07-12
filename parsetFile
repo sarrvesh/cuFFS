@@ -1,3 +1,6 @@
+// How many GPUs to use
+nGPU = 1;
+
 // Define how fits files are stored on disk
 qCubeName = "/data/see041/wsrt_sings/cube-Q.fits";
 uCubeName = "/data/see041/wsrt_sings/cube-U.fits";

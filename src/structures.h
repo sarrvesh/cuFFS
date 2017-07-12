@@ -39,6 +39,8 @@ struct optionsList {
     int plotRMSF;
     double phiMin, dPhi;
     int nPhi;
+    
+    int nGPU;
 };
 
 /* Structure to store all information related to RM Synthesis */

@@ -122,6 +122,10 @@ struct optionsList parseInput(char *parsetFileName) {
         printf("INFO: 'plotRMSF' undefined in parset\n");
         inOptions.plotRMSF = FALSE;
     }
+    if(! config_lookup_int(&cfg, "nGPU", &inOptions.nGPU)) {
+        printf("INFO: 'nGPU' undefined in parset. Will use 1 device.\n");
+        inOptions.nGPU = 1;
+    }
     
     config_destroy(&cfg);
     return(inOptions);
