@@ -102,7 +102,6 @@ int main(int argc, char *argv[]) {
     printf("INFO: Accessing the input files\n");
     printf("WARN: Assuming NAXIS3 is the frequency axis\n");
     fitsStatus = SUCCESS;
-    puts(inOptions.qCubeName);
     fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
     fits_open_file(&params.uFile, inOptions.uCubeName, READONLY, &fitsStatus);
     checkFitsError(fitsStatus);
