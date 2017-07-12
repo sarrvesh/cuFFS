@@ -321,17 +321,18 @@ extern "C"
 __global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
                          float *d_qPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float dlambda2) {
-    int i;
-    int index = blockIdx.x*blockDim.x + threadIdx.x;
-    float thisPhi = d_phiAxis[index];    
-    float thisCos = cosf(2*thisPhi*dlambda2);
-    float thisSin = sinf(2*thisPhi*dlambda2);
+    __shared__ int i;
+    const int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const int offset = index*nElements;
+    const float thisPhi = d_phiAxis[index];    
+    const float thisCos = cosf(2*thisPhi*dlambda2);
+    const float thisSin = sinf(2*thisPhi*dlambda2);
 
     if(index < nPhi) {
         /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
         for(i=0; i<nElements; i++)
-            d_qPhi[index*nElements+i] += d_qImageArray[i]*thisCos - 
-                                         d_uImageArray[i]*thisSin;
+            d_qPhi[offset+i] += d_qImageArray[i]*thisCos - 
+                                d_uImageArray[i]*thisSin;
     }
 }
 
@@ -344,17 +345,18 @@ extern "C"
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float dlambda2) {
-    int i;
-    int index = blockIdx.x*blockDim.x + threadIdx.x;
-    float thisPhi = d_phiAxis[index];
-    float thisCos = cosf(2*thisPhi*dlambda2);
-    float thisSin = sinf(2*thisPhi*dlambda2);
+    __shared__ int i;
+    const int index = blockIdx.x*blockDim.x + threadIdx.x;
+    const int offset = index*nElements;
+    const float thisPhi = d_phiAxis[index];
+    const float thisCos = cosf(2*thisPhi*dlambda2);
+    const float thisSin = sinf(2*thisPhi*dlambda2);
 
     if(index < nPhi) {
         /* For each element in U, compute U(thisPhi) and add it to U(phi) */
         for(i=0; i<nElements; i++) 
-            d_uPhi[index*nElements+i] += d_uImageArray[i]*thisCos - 
-                                         d_qImageArray[i]*thisSin;
+            d_uPhi[offset+i] += d_uImageArray[i]*thisCos - 
+                                d_qImageArray[i]*thisSin;
     }
 }
 
