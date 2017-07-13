@@ -172,8 +172,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     long unsigned int losSize, nLOS; 
 
     /* Check how many lines of sight will fit into gpu memory */
-    losSize = sizeof(float)*params->qAxisLen3 +
-              sizeof(float)*inOptions->nPhi;
+    losSize = 2 * (sizeof(float)*params->qAxisLen3) +
+              3 * (sizeof(float)*inOptions->nPhi);
     nLosAtOnce = selectedDeviceInfo->globalMem/losSize;
     nLOS = params->qAxisLen1 * params->qAxisLen2;
     
