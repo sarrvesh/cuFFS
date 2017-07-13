@@ -92,6 +92,7 @@ int main(int argc, char *argv[]) {
     /* Select the best device */
     selectedDevice = getBestDevice(gpuList, nDevices);
     cudaSetDevice(selectedDevice);
+    setMemMapFlag();
     checkCudaError();
 
     /* Copy the device info for the best device */
