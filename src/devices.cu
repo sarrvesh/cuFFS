@@ -240,8 +240,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                                                    d_pPhi, inOptions->nPhi);
     
             /* Read this line of sight from Q and U array */
-            fits_read_subset(params->qFile, TFLOAT, fPixel, lPixel, inc, 
-                             NULL, qImageArray, NULL, &fitsStatus);
+            for(k=1; k<=params->qAxisLen3; k++) {
+               fPixel[3] = k;
+               fits_read_pix(params->qFile, TFLOAT, fPixel, 1, NULL, 
+                             &(qImageArray[k-1], NULL, &status)
+            }
             /*fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
                              NULL, &uImageArray, NULL, &fitsStatus);
             checkFitsError(fitsStatus);*/
