@@ -225,14 +225,15 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Since we are reading the entire frequency axis at once, 
        fPixel[2] = 1 and lPixel[2] = {NAXIS3}+1 */
-    fPixel[2] = 1; lPixel[2] = params->qAxisLen3+1;
+    fPixel[2] = 1; lPixel[2] = params->qAxisLen3;
     
     /* Process each line of sight individually */
     size = sizeof(d_qImageArray)*params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
-        fPixel[0] = lPixel[0] = i;
+        fPixel[1] = i; lPixel[1] = i;
         for(j=1; j<=params->qAxisLen2; j++) {
-            fPixel[1] = lPixel[1] = j;
+            printf("INFO: Processing i=%d j=%d\n", i, j);
+            fPixel[0] = j; lPixel[0] = j;
             
             /* Set Q/U/P accumulator output arrays on GPU to 0 */
             initializeQUP<<<initBlockSize, initThreadSize>>>(d_qPhi, d_uPhi,
@@ -240,16 +241,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     
             /* Read this line of sight from Q and U array */
             fits_read_subset(params->qFile, TFLOAT, fPixel, lPixel, inc, 
-                             NULL, &qImageArray, NULL, &fitsStatus);
-            fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
+                             NULL, qImageArray, NULL, &fitsStatus);
+            /*fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
                              NULL, &uImageArray, NULL, &fitsStatus);
-            checkFitsError(fitsStatus);
+            checkFitsError(fitsStatus);*/
             
             /* Move Q(lambda) and U(lambda) to device */
-            cudaMemcpy(d_qImageArray, qImageArray, size,
+            /*cudaMemcpy(d_qImageArray, qImageArray, size,
                        cudaMemcpyHostToDevice);
             cudaMemcpy(d_uImageArray, uImageArray, size,
-                       cudaMemcpyHostToDevice);
+                       cudaMemcpyHostToDevice);*/
             
             /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
             
