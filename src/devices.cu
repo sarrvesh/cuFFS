@@ -36,6 +36,9 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
 __global__ void initializeQUP(float *d_qPhi, float *d_uPhi, 
                               float *d_pPhi, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
+__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nChan,
+                           float K, float *d_qPhi, float *d_uPhi, float *d_pPhi,  
+                           float *d_phiAxis, int nPhi, float *d_lambdaDiff2);
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo);
 }
@@ -177,17 +180,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     float *d_qImageArray, *d_uImageArray;
     float *d_qPhi, *d_uPhi, *d_pPhi;
     float *d_phiAxis;
-    int initThreadSize, initBlockSize;
     int calcThreadSize, calcBlockSize;
     cudaEvent_t startEvent, stopEvent;
+    cudaEvent_t tStart, tStop;
     float millisec = 0.;
-    long inc[] = {1,1,1};
-    long fPixel[params->qAxisLen3], lPixel[params->qAxisLen3];
+    long fPixel[params->qAxisLen3];
     int fitsStatus = 0;
     
     /* Initialize CUDA events to measure time */
-    cudaEventCreate(&startEvent);
-    cudaEventCreate(&stopEvent);
+    cudaEventCreate(&startEvent); cudaEventCreate(&tStart);
+    cudaEventCreate(&stopEvent);  cudaEventCreate(&tStop);
 
     /* Compute \lambda^2 - \lambda^2_0 once */
     lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(lambdaDiff2));
@@ -220,53 +222,95 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaEventRecord(startEvent);
 
     /* Determine what the appropriate block and grid sizes are */
-    initThreadSize = selectedDeviceInfo.warpSize;
-    initBlockSize  = inOptions->nPhi/initThreadSize + 1;
+    calcThreadSize = selectedDeviceInfo.warpSize;
+    calcBlockSize  = inOptions->nPhi/calcThreadSize + 1;
+    printf("INFO: Launching %d blocks each with %d threads\n", 
+            calcBlockSize, calcThreadSize);
 
-    /* Since we are reading the entire frequency axis at once, 
-       fPixel[2] = 1 and lPixel[2] = {NAXIS3}+1 */
-    fPixel[2] = 1; lPixel[2] = params->qAxisLen3;
-    
     /* Process each line of sight individually */
     size = sizeof(d_qImageArray)*params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
-        fPixel[1] = i; lPixel[1] = i;
+        fPixel[1] = i;
         for(j=1; j<=params->qAxisLen2; j++) {
-            printf("INFO: Processing i=%d j=%d\n", i, j);
-            fPixel[0] = j; lPixel[0] = j;
-            
-            /* Set Q/U/P accumulator output arrays on GPU to 0 */
-            initializeQUP<<<initBlockSize, initThreadSize>>>(d_qPhi, d_uPhi,
-                                                   d_pPhi, inOptions->nPhi);
+            fPixel[0] = j;
     
             /* Read this line of sight from Q and U array */
+            cudaEventRecord(tStart);
             for(k=1; k<=params->qAxisLen3; k++) {
-               fPixel[3] = k;
+               fPixel[2] = k;
                fits_read_pix(params->qFile, TFLOAT, fPixel, 1, NULL, 
                              &(qImageArray[k-1]), NULL, &fitsStatus);
+               fits_read_pix(params->uFile, TFLOAT, fPixel, 1, NULL,
+                             &(uImageArray[k-1]), NULL, &fitsStatus);
+               checkFitsError(fitsStatus);
             }
-            /*fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
-                             NULL, &uImageArray, NULL, &fitsStatus);
-            checkFitsError(fitsStatus);*/
+            cudaEventRecord(tStop);
+            cudaEventSynchronize(tStop);
+            cudaEventElapsedTime(&millisec, tStart, tStop);
+            printf("INFO: %0.2f ms to read fits data\n", millisec);
             
             /* Move Q(lambda) and U(lambda) to device */
-            /*cudaMemcpy(d_qImageArray, qImageArray, size,
+            cudaEventRecord(tStart);
+            cudaMemcpy(d_qImageArray, qImageArray, size,
                        cudaMemcpyHostToDevice);
             cudaMemcpy(d_uImageArray, uImageArray, size,
-                       cudaMemcpyHostToDevice);*/
+                       cudaMemcpyHostToDevice);
+            cudaEventRecord(tStop);
+            cudaEventSynchronize(tStop);
+            cudaEventElapsedTime(&millisec, tStart, tStop);
+            printf("INFO: %0.2f ms to move data to gpu\n", millisec);
             
             /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
-            
+            cudaEventRecord(tStart);
+            computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray,
+                         d_uImageArray, params->qAxisLen3, params->K, d_qPhi, 
+                         d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
+            cudaEventRecord(tStop);
+            cudaEventSynchronize(tStop);
+            cudaEventElapsedTime(&millisec, tStart, tStop);
+            printf("INFO: %0.2f ms to process data\n", millisec);
+
             /* Move Q(\phi), U(\phi) and P(\phi) to host */
-            checkCudaError();
+            break; /* THIS IS UNWANTED. ONLY FOR TESTING PURPOSE */
         }
+        break;
     }
     cudaEventRecord(stopEvent);
     cudaEventSynchronize(stopEvent);
     cudaEventElapsedTime(&millisec, startEvent, stopEvent);
-    printf("INFO: Time to process the cubes: %0.2f ms.\n", millisec);
+    printf("INFO: Time to process the cubes: %0.2f s.\n", millisec);
     
     return(SUCCESS);
+}
+
+/*************************************************************
+*
+* Device code to compute Q(\phi)
+*
+*************************************************************/
+extern "C"
+__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nChan, 
+                           float K, float *d_qPhi, float *d_uPhi, float *d_pPhi, 
+                           float *d_phiAxis, int nPhi, float *d_lambdaDiff2) {
+    int i;
+    const int index   = blockIdx.x*blockDim.x + threadIdx.x;
+    const float myphi = d_phiAxis[index];
+    float qPhi, uPhi, pPhi;
+    qPhi = 0; uPhi = 0;
+
+    if(index < nPhi) {
+        for(i=0; i<nChan; i++) {
+            qPhi += d_qImageArray[i]*cosf(myphi*d_lambdaDiff2[i]) + 
+                    d_uImageArray[i]*sinf(myphi*d_lambdaDiff2[i]);
+            uPhi += d_uImageArray[i]*cosf(myphi*d_lambdaDiff2[i]) -
+                    d_qImageArray[i]*cosf(myphi*d_lambdaDiff2[i]);
+        }
+        pPhi = sqrt(qPhi*qPhi + uPhi*uPhi);
+
+        d_qPhi[index] = K*qPhi;
+        d_uPhi[index] = K*uPhi;
+        d_pPhi[index] = K*pPhi;
+    }
 }
 
 /*************************************************************

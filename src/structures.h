@@ -64,6 +64,7 @@ struct parList {
     
     float *phiAxis;
     float *rmsf, *rmsfReal, *rmsfImag;
+    float K;
 
     float *maskArray;
 };
