@@ -169,15 +169,15 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    long unsigned int losSize, nLOS; 
+    long unsigned int losSize, nLOS, nLosAtOnce; 
 
     /* Check how many lines of sight will fit into gpu memory */
     losSize = 2 * (sizeof(float)*params->qAxisLen3) +
               3 * (sizeof(float)*inOptions->nPhi);
-    nLosAtOnce = selectedDeviceInfo->globalMem/losSize;
+    nLosAtOnce = selectedDeviceInfo.globalMem/losSize;
     nLOS = params->qAxisLen1 * params->qAxisLen2;
     
-    printf("INFO: Will process %d/%d lines of sight at once.\n",
+    printf("INFO: Will process %ld/%ld lines of sight at once.\n",
            nLosAtOnce, nLOS);
     
     return(SUCCESS);
