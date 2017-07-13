@@ -2,7 +2,7 @@
 
 Code Status
 ============
-* Currently being tested on NVidia Tesla P100-SXM2-16GB
+* Currently being tested using NVidia Tesla P100-SXM2-16GB on the [Bracewell](https://confluence.csiro.au/display/SC/CSIRO+Accelerator+Cluster+-+Bracewell) cluster.
 
 Dependencies
 ============
@@ -15,3 +15,7 @@ Dependencies
 Installation
 ============
 See build_brinkley.sh for sample compiler instruction.
+
+Notes
+=====
+The code assumes that the pixels values are IEEE single precision floating points (BITPIX=-32) and that the input cubes have 3 axes (2 spatial dimensions and 1 frequency axis). If you have individual stokes Q and U channel maps, use the helper/makeFitsCube.py to get the data in the required format.
