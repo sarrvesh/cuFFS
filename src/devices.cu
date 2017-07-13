@@ -230,9 +230,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     /* Process each line of sight individually */
     size = sizeof(d_qImageArray)*params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
-        fPixel[1] = lPixel[1] = i;
+        fPixel[0] = lPixel[0] = i;
         for(j=1; j<=params->qAxisLen2; j++) {
-            fPixel[2] = lPixel[2] = j;
+            fPixel[1] = lPixel[1] = j;
             
             /* Set Q/U/P accumulator output arrays on GPU to 0 */
             initializeQUP<<<initBlockSize, initThreadSize>>>(d_qPhi, d_uPhi,
