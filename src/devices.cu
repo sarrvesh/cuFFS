@@ -169,146 +169,17 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    long *fPixel;
-    LONGLONG nImElements, nCubeElements;
-    float *qImageArray, *uImageArray;
-    float *d_qImageArray, *d_uImageArray;
-    float *d_phiAxis;
-    float *d_qPhi, *d_uPhi;
-    float *qPhi;
-    int i, j;
-    size_t size, imSize, cubeSize;
-    int status = 0;
-    int threadSize, blockSize;
-    int nImRows, nRowElements;
-    long nFrames;
-    float dLambda2;
+    long unsigned int losSize, nLOS; 
+
+    /* Check how many lines of sight will fit into gpu memory */
+    losSize = sizeof(float)*params->qAxisLen3 +
+              sizeof(float)*inOptions->nPhi;
+    nLosAtOnce = selectedDeviceInfo->globalMem/losSize;
+    nLOS = params->qAxisLen1 * params->qAxisLen2;
     
-    /* Initialize CUDA events to measure time */
-    cudaEvent_t startEvent, stopEvent;
-    float millisec = 0.;
-    cudaEventCreate(&startEvent);
-    cudaEventCreate(&stopEvent);
-
-    /* Copy the phi array to GPU */
-    size = sizeof(d_phiAxis)*inOptions->nPhi;
-    cudaMalloc(&d_phiAxis, size);
-    cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
-    checkCudaError();
-
-    /* Estimate the sizes of the input and output images */
-    nImElements = params->qAxisLen1 * params->qAxisLen2;
-    nCubeElements = params->qAxisLen1*params->qAxisLen2*inOptions->nPhi;
-    imSize = sizeof(float)*nImElements;
-    cubeSize = sizeof(float)*nCubeElements;
+    printf("INFO: Will process %d/%d lines of sight at once.\n",
+           nLosAtOnce, nLOS);
     
-    /* Check if output fits inside GPU memory */
-    printf("INFO: Size of input Q/U channel: %0.3f kiB\n", imSize/KILO);
-    printf("INFO: Size of output Q and U cube: %0.3f MiB\n", 2.0*cubeSize/MEGA);
-    printf("INFO: Available memory on GPU: %0.3f MiB\n", 
-           selectedDeviceInfo.globalMem/MEGA);
-    if(selectedDeviceInfo.globalMem < cubeSize) {
-        printf("ERROR: Insufficient memory on device! Try reducing nPhi\n\n");
-        return(FAILURE);
-    }
-    
-    /* Allocate memory on device for the input Q and U images */
-    printf("INFO: Trying to copy data to device\n");
-    cudaMalloc(&d_qImageArray, imSize);
-    cudaMalloc(&d_uImageArray, imSize);
-    checkCudaError();
-    
-    /* Allocate memory for output \phi cube */
-    cudaMalloc(&d_qPhi, cubeSize);
-    cudaMalloc(&d_uPhi, cubeSize);
-    checkCudaError();
-
-    /* Get the optimal thread and block size */
-    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi,
-                          selectedDeviceInfo);
-    printf("\nINFO: Will launch kernels with %d blocks %d threads each\n",
-           blockSize, threadSize);
-
-    /* Initialize output cubes to 0. */
-    cudaEventRecord(startEvent);
-    initializeQU<<<blockSize, threadSize>>>(d_qPhi, nImElements, inOptions->nPhi);
-    initializeQU<<<blockSize, threadSize>>>(d_uPhi, nImElements, inOptions->nPhi);
-    checkCudaError();
-    cudaEventRecord(stopEvent);
-    cudaEventSynchronize(stopEvent);
-    cudaEventElapsedTime(&millisec, startEvent, stopEvent);
-    printf("INFO: Time for initializing host arrays %0.2f ms.\n", millisec);
-    
-    /* Allocate memory for output cube */
-    qPhi = (float *)calloc(nCubeElements, sizeof(qPhi));
-    if(qPhi == NULL) {
-        printf("ERROR: Unable to allocate memory for output\n");
-        return(FAILURE);
-    }
-    
-    /* Setup fitsio access variables */
-    fPixel = (long *)calloc(params->qAxisNum, sizeof(fPixel));
-    for(i=1; i<=params->qAxisNum; i++) { fPixel[i-1] = 1; }
-    qImageArray = (float *)calloc(nImElements, sizeof(qImageArray));
-    uImageArray = (float *)calloc(nImElements, sizeof(uImageArray));
-
-    for(j=1; j<=params->qAxisLen3; j++) {
-       /* Read in this Q and U channel */
-       fPixel[2] = j;
-       fits_read_pix(params->qFile, TFLOAT, fPixel, nImElements, NULL,
-         qImageArray, NULL, &status);
-       fits_read_pix(params->uFile, TFLOAT, fPixel, nImElements, NULL,
-         uImageArray, NULL, &status);
-       checkFitsError(status);
-       /* Copy the read in channel maps to GPU */
-       cudaMemcpy(d_qImageArray, qImageArray, imSize, cudaMemcpyHostToDevice);
-       cudaMemcpy(d_uImageArray, uImageArray, imSize, cudaMemcpyHostToDevice);
-       checkCudaError();
-       /* Launch kernels to do RM Synthesis */
-       cudaEventRecord(startEvent);
-       dLambda2 = params->lambda2[j-1] - params->lambda20;
-       computeQ<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_qPhi,
-         d_phiAxis, inOptions->nPhi, nImElements, dLambda2);
-       computeU<<<blockSize, threadSize>>>(d_qImageArray, d_uImageArray, d_uPhi,
-         d_phiAxis, inOptions->nPhi, nImElements, dLambda2);
-       checkCudaError();
-       cudaEventRecord(stopEvent);
-       cudaEventSynchronize(stopEvent);
-       cudaEventElapsedTime(&millisec, startEvent, stopEvent);
-       printf("INFO: Finished channel %d/%d. Time elapsed: %0.3f ms.\n", j, params->qAxisLen3, millisec);
-    }
-    
-    /* Move the computed Q(phi) to host */
-    cudaMemcpy(qPhi, d_qPhi, cubeSize, cudaMemcpyDeviceToHost);
-    cudaFree(d_qPhi);
-    checkCudaError();
-    /* Write the Q cube to disk */
-    writePolCubeToDisk(qPhi, DIRTY_Q, inOptions, params);
-    /* Move the computed U(\phi) to host */
-    cudaMemcpy(qPhi, d_uPhi, cubeSize, cudaMemcpyDeviceToHost);
-    cudaFree(d_uPhi);
-    checkCudaError();
-    /* Write the U cube to disk */
-    writePolCubeToDisk(qPhi, DIRTY_U, inOptions, params);
-    free(qPhi);
-
-    /* Free remaining allocated mem on device */
-    cudaFree(d_phiAxis);
-    cudaFree(d_qImageArray);
-    cudaFree(d_uImageArray);
-
-    /* Free remaining allocated mem on host */
-    free(fPixel);
-    free(qImageArray);
-    free(uImageArray);
-
-    /* Compute P cube. Q, U and P will all might not fit in the device
-       global memory. Need a clever way to manage memory and threads. */
-    nRowElements = params->qAxisLen1;
-    nImRows = params->qAxisLen2 * inOptions->nPhi;
-    getGpuAllocForP(&blockSize, &threadSize, &nFrames, nImRows, nRowElements, 
-                    selectedDeviceInfo);
-
     return(SUCCESS);
 }
 

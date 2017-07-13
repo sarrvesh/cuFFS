@@ -1,0 +1,4 @@
+VERSION  FEATURES
+=======  ======================================================================
+V0.1     Code tested using a single GPU on the Bracewell cluster. Tagged on 
+            July 11, 2017.
