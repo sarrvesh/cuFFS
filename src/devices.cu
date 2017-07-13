@@ -228,6 +228,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     fPixel[2] = 1; lPixel[2] = params->qAxisLen3+1;
     
     /* Process each line of sight individually */
+    size = sizeof(d_qImageArray)*params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
         fPixel[1] = lPixel[1] = i;
         for(j=1; j<=params->qAxisLen2; j++) {
@@ -245,6 +246,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
             checkFitsError(fitsStatus);
             
             /* Move Q(lambda) and U(lambda) to device */
+            cudaMemcpy(d_qImageArray, qImageArray, size,
+                       cudaMemcpyHostToDevice);
+            cudaMemcpy(d_uImageArray, uImageArray, size,
+                       cudaMemcpyHostToDevice);
             
             /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
             
