@@ -315,11 +315,8 @@ __global__ void initializeQUP(float *d_qPhi, float *d_uPhi,
 extern "C"
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo) {
-    *blockSize = selectedDeviceInfo.maxThreadPerBlock;
-    if(nPhi < *blockSize)
-        *threadSize = 1;
-    else
-        *threadSize = (int) nPhi/(*blockSize) + 1;
+    *threadSize = selectedDeviceInfo.warpSize;
+    if(!(*blockSize = nPhi/(*threadSize))) { *blockSize = 1; }
 }
 
 /*************************************************************
