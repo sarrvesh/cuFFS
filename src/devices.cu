@@ -170,23 +170,24 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    long unsigned int nSightLines;
-    int i; 
+    int i, j; 
     float *lambdaDiff2, *d_lambdaDiff2;
     size_t size;
+    float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
     float *d_qPhi, *d_uPhi, *d_pPhi;
     float *d_phiAxis;
-    int threadSize, blockSize;
+    int initThreadSize, initBlockSize;
+    int calcThreadSize, calcBlockSize;
     cudaEvent_t startEvent, stopEvent;
     float millisec = 0.;
+    long inc[] = {1,1,1};
+    long fPixel[params->qAxisLen3], lPixel[params->qAxisLen3];
+    int fitsStatus = 0;
     
     /* Initialize CUDA events to measure time */
     cudaEventCreate(&startEvent);
     cudaEventCreate(&stopEvent);
-
-    /* How many lines of sights are there? */
-    nSightLines = params->qAxisLen1 * params->qAxisLen2;
 
     /* Compute \lambda^2 - \lambda^2_0 once */
     lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(lambdaDiff2));
@@ -195,14 +196,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
         return(FAILURE);
     }
     for(i=0;i<params->qAxisLen3;i++)
-        lambdaDiff2[i] = 2*(params->lambda2[i]-params->lambda20);
-
-    /* Get optimum thread and block size */
-    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi,
-                          selectedDeviceInfo);
-    printf("INFO: Using %d blocks/grid and %d threads/block", 
-           blockSize, threadSize);
-           
+        lambdaDiff2[i] = 2.0*(params->lambda2[i]-params->lambda20);
+    
+    /* Allocate input arrays on CPU */
+    qImageArray = (float *)calloc(params->qAxisLen3, sizeof(qImageArray));
+    uImageArray = (float *)calloc(params->qAxisLen3, sizeof(uImageArray));
     /* Allocate and initialize input arrays on GPU */
     size = sizeof(d_qImageArray)*params->qAxisLen3;
     cudaMalloc(&d_qImageArray, size);
@@ -218,20 +216,41 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
     checkCudaError();
 
-    /* Process each line of sight individually */
+    /* Start the clock */
     cudaEventRecord(startEvent);
-    for(i=1; i<=nSightLines; i++) {
-        /* Set Q/U/P output arrays on GPU to 0 */
-        initializeQUP<<<blockSize, threadSize>>>(d_qPhi, d_uPhi, d_pPhi, 
-                                                 inOptions->nPhi);
-        checkCudaError();
+
+    /* Determine what the appropriate block and grid sizes are */
+    initThreadSize = selectedDeviceInfo.warpSize;
+    initBlockSize  = inOptions->nPhi/initThreadSize + 1;
+
+    /* Since we are reading the entire frequency axis at once, 
+       fPixel[2] = 1 and lPixel[2] = {NAXIS3}+1 */
+    fPixel[2] = 1; lPixel[2] = params->qAxisLen3+1;
     
-        /* Move Q(lambda) and U(lambda) to device */
-        
-        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
-        
-        /* Move Q(\phi), U(\phi) and P(\phi) to host */
+    /* Process each line of sight individually */
+    for(i=1; i<=params->qAxisLen1; i++) {
+        fPixel[1] = lPixel[1] = i;
+        for(j=1; j<=params->qAxisLen2; j++) {
+            fPixel[2] = lPixel[2] = j;
+            
+            /* Set Q/U/P accumulator output arrays on GPU to 0 */
+            initializeQUP<<<initBlockSize, initThreadSize>>>(d_qPhi, d_uPhi,
+                                                   d_pPhi, inOptions->nPhi);
     
+            /* Read this line of sight from Q and U array */
+            fits_read_subset(params->qFile, TFLOAT, fPixel, lPixel, inc, 
+                             NULL, &qImageArray, NULL, &fitsStatus);
+            fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
+                             NULL, &uImageArray, NULL, &fitsStatus);
+            checkFitsError(fitsStatus);
+            
+            /* Move Q(lambda) and U(lambda) to device */
+            
+            /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
+            
+            /* Move Q(\phi), U(\phi) and P(\phi) to host */
+            checkCudaError();
+        }
     }
     cudaEventRecord(stopEvent);
     cudaEventSynchronize(stopEvent);
