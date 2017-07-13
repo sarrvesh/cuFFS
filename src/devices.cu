@@ -33,7 +33,8 @@ __global__ void computeQ(float *d_qImageArray, float *d_uImageArray,
 __global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
                          float *d_uPhi, float *d_phiAxis, int nPhi, 
                          int nElements, float dlambda2);
-__global__ void initializeQU(float *d_array, int nElements, int nPhi);
+__global__ void initializeQUP(float *d_qPhi, float *d_uPhi, 
+                              float *d_pPhi, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo);
@@ -169,16 +170,73 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    long unsigned int losSize, nLOS, nLosAtOnce; 
-
-    /* Check how many lines of sight will fit into gpu memory */
-    losSize = 2 * (sizeof(float)*params->qAxisLen3) +
-              3 * (sizeof(float)*inOptions->nPhi);
-    nLosAtOnce = selectedDeviceInfo.globalMem/losSize;
-    nLOS = params->qAxisLen1 * params->qAxisLen2;
+    long unsigned int nSightLines;
+    int i; 
+    float *lambdaDiff2, *d_lambdaDiff2;
+    size_t size;
+    float *d_qImageArray, *d_uImageArray;
+    float *d_qPhi, *d_uPhi, *d_pPhi;
+    float *d_phiAxis;
+    int threadSize, blockSize;
+    cudaEvent_t startEvent, stopEvent;
+    float millisec = 0.;
     
-    printf("INFO: Will process %ld/%ld lines of sight at once.\n",
-           nLosAtOnce, nLOS);
+    /* Initialize CUDA events to measure time */
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
+
+    /* How many lines of sights are there? */
+    nSightLines = params->qAxisLen1 * params->qAxisLen2;
+
+    /* Compute \lambda^2 - \lambda^2_0 once */
+    lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(lambdaDiff2));
+    if(lambdaDiff2 == NULL) {
+        printf("ERROR: Mem alloc failed for lambdaDiff2\n\n");
+        return(FAILURE);
+    }
+    for(i=0;i<params->qAxisLen3;i++)
+        lambdaDiff2[i] = 2*(params->lambda2[i]-params->lambda20);
+
+    /* Get optimum thread and block size */
+    getGpuAllocForRMSynth(&blockSize, &threadSize, inOptions->nPhi,
+                          selectedDeviceInfo);
+    printf("INFO: Using %d blocks/grid and %d threads/block", 
+           blockSize, threadSize);
+           
+    /* Allocate and initialize input arrays on GPU */
+    size = sizeof(d_qImageArray)*params->qAxisLen3;
+    cudaMalloc(&d_qImageArray, size);
+    cudaMalloc(&d_uImageArray, size);
+    cudaMalloc(&d_lambdaDiff2, size);
+    cudaMemcpy(d_lambdaDiff2, lambdaDiff2, size, cudaMemcpyHostToDevice);
+    /* Allocate and initialize output arrays on GPU */
+    size = sizeof(d_qPhi)*inOptions->nPhi;
+    cudaMalloc(&d_qPhi, size); 
+    cudaMalloc(&d_uPhi, size);
+    cudaMalloc(&d_pPhi, size);
+    cudaMalloc(&d_phiAxis, size);
+    cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
+    checkCudaError();
+
+    /* Process each line of sight individually */
+    cudaEventRecord(startEvent);
+    for(i=1; i<=nSightLines; i++) {
+        /* Set Q/U/P output arrays on GPU to 0 */
+        initializeQUP<<<blockSize, threadSize>>>(d_qPhi, d_uPhi, d_pPhi, 
+                                                 inOptions->nPhi);
+        checkCudaError();
+    
+        /* Move Q(lambda) and U(lambda) to device */
+        
+        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
+        
+        /* Move Q(\phi), U(\phi) and P(\phi) to host */
+    
+    }
+    cudaEventRecord(stopEvent);
+    cudaEventSynchronize(stopEvent);
+    cudaEventElapsedTime(&millisec, startEvent, stopEvent);
+    printf("INFO: Time to process the cubes: %0.2f ms.\n", millisec);
     
     return(SUCCESS);
 }
@@ -237,13 +295,14 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
 *
 *************************************************************/
 extern "C"
-__global__ void initializeQU(float *d_array, int nElements, int nPhi) {
-    int i;
+__global__ void initializeQUP(float *d_qPhi, float *d_uPhi, 
+                              float *d_pPhi, int nPhi) {
     int index = blockIdx.x*blockDim.x + threadIdx.x;
 
     if(index < nPhi) {
-        for(i=0; i<nElements; i++)
-            d_array[index*nElements+i] = 0.0;
+        d_qPhi[index] = 0.0;
+        d_uPhi[index] = 0.0;
+        d_pPhi[index] = 0.0;
     }
 }
 
