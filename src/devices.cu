@@ -170,7 +170,7 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    int i, j; 
+    int i, j, k; 
     float *lambdaDiff2, *d_lambdaDiff2;
     size_t size;
     float *qImageArray, *uImageArray;
@@ -243,7 +243,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
             for(k=1; k<=params->qAxisLen3; k++) {
                fPixel[3] = k;
                fits_read_pix(params->qFile, TFLOAT, fPixel, 1, NULL, 
-                             &(qImageArray[k-1], NULL, &status)
+                             &(qImageArray[k-1]), NULL, &fitsStatus);
             }
             /*fits_read_subset(params->uFile, TFLOAT, fPixel, lPixel, inc, 
                              NULL, &uImageArray, NULL, &fitsStatus);
