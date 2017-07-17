@@ -36,9 +36,10 @@ __global__ void computeU(float *d_qImageArray, float *d_uImageArray,
 __global__ void initializeQUP(float *d_qPhi, float *d_uPhi, 
                               float *d_pPhi, int nPhi);
 __global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
-__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nChan,
-                           float K, float *d_qPhi, float *d_uPhi, float *d_pPhi,  
-                           float *d_phiAxis, int nPhi, float *d_lambdaDiff2);
+__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS, 
+                           int nChan, float K, float *d_qPhi, float *d_uPhi, 
+                           float *d_pPhi, float *d_phiAxis, int nPhi, 
+                           float *d_lambdaDiff2);
 void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
                            struct deviceInfoList selectedDeviceInfo);
 }
@@ -186,6 +187,7 @@ extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
     int i, j, k; 
+    int inputIdx, outputIdx;
     float *lambdaDiff2, *d_lambdaDiff2;
     size_t size;
     float *qImageArray, *uImageArray;
@@ -193,7 +195,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     float *d_qPhi, *d_uPhi, *d_pPhi;
     float *qPhi, *uPhi, *pPhi;
     float *d_phiAxis;
-    int calcThreadSize, calcBlockSize;
+    dim3 calcThreadSize, calcBlockSize;
     cudaEvent_t startEvent, stopEvent;
     cudaEvent_t tStart, tStop;
     float millisec = 0.;
@@ -217,15 +219,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaMemcpy(d_lambdaDiff2, lambdaDiff2, size, cudaMemcpyHostToDevice);
     
     /* Allocate input arrays on CPU */
-    cudaHostAlloc( (void**)&qImageArray, params->qAxisLen3*sizeof(qImageArray),
-                   cudaHostAllocWriteCombined | cudaHostAllocMapped);
-    cudaHostAlloc( (void**)&uImageArray, params->uAxisLen3*sizeof(uImageArray),
-                   cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    size = params->qAxisLen3*params->qAxisLen2*sizeof(qImageArray);
+    cudaHostAlloc( (void**)&qImageArray, size,
+                 cudaHostAllocWriteCombined | cudaHostAllocMapped);
+    cudaHostAlloc( (void**)&uImageArray, size,
+                 cudaHostAllocWriteCombined | cudaHostAllocMapped);
     /* Get pointers to input arrays on GPU */
     cudaHostGetDevicePointer(&d_qImageArray, qImageArray, 0);
     cudaHostGetDevicePointer(&d_uImageArray, uImageArray, 0);
     /* Allocate output arrays on CPU */
-    size = sizeof(qPhi)*inOptions->nPhi;
+    size = sizeof(qPhi)*inOptions->nPhi*params->qAxisLen2;
     cudaHostAlloc( (void**)&qPhi, size, cudaHostAllocMapped);
     cudaHostAlloc( (void**)&uPhi, size, cudaHostAllocMapped);
     cudaHostAlloc( (void**)&pPhi, size, cudaHostAllocMapped);
@@ -244,57 +247,46 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaEventRecord(startEvent);
 
     /* Determine what the appropriate block and grid sizes are */
-    calcThreadSize = selectedDeviceInfo.warpSize;
-    calcBlockSize  = inOptions->nPhi/calcThreadSize + 1;
-    printf("INFO: Launching %d blocks each with %d threads\n", 
-            calcBlockSize, calcThreadSize);
+    calcThreadSize.x = selectedDeviceInfo.warpSize;
+    calcBlockSize.y  = params->qAxisLen2;
+    calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
+    printf("INFO: Launching (%d,%d,1) blocks each with %d threads\n", 
+            calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
 
     /* Process each line of sight individually */
-    size = sizeof(d_qImageArray)*params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
         fPixel[1] = i;
+        /* Read all lines of sight in each row separately */
+        cudaEventRecord(tStart);
         for(j=1; j<=params->qAxisLen2; j++) {
             fPixel[0] = j;
-    
-            /* Read this line of sight from Q and U array */
-            cudaEventRecord(tStart);
             for(k=1; k<=params->qAxisLen3; k++) {
                fPixel[2] = k;
+               inputIdx = (j-1)*params->qAxisLen2 + (k-1);
                fits_read_pix(params->qFile, TFLOAT, fPixel, 1, NULL, 
-                             &(qImageArray[k-1]), NULL, &fitsStatus);
+                             &(qImageArray[inputIdx]), NULL, &fitsStatus);
                fits_read_pix(params->uFile, TFLOAT, fPixel, 1, NULL,
-                             &(uImageArray[k-1]), NULL, &fitsStatus);
+                             &(uImageArray[inputIdx]), NULL, &fitsStatus);
                checkFitsError(fitsStatus);
             }
-            cudaEventRecord(tStop);
-            cudaEventSynchronize(tStop);
-            cudaEventElapsedTime(&millisec, tStart, tStop);
-            printf("INFO: %0.2f ms to read fits data\n", millisec);
-            
-            /* Move Q(lambda) and U(lambda) to device */
-            /*cudaEventRecord(tStart);
-            cudaMemcpy(d_qImageArray, qImageArray, size,
-                       cudaMemcpyHostToDevice);
-            cudaMemcpy(d_uImageArray, uImageArray, size,
-                       cudaMemcpyHostToDevice);
-            cudaEventRecord(tStop);
-            cudaEventSynchronize(tStop);
-            cudaEventElapsedTime(&millisec, tStart, tStop);
-            printf("INFO: %0.2f ms to move data to gpu\n", millisec);*/
-            
-            /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
-            cudaEventRecord(tStart);
-            computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray,
-                         d_uImageArray, params->qAxisLen3, params->K, d_qPhi, 
-                         d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
-            cudaThreadSynchronize();
-            cudaEventRecord(tStop);
-            cudaEventSynchronize(tStop);
-            cudaEventElapsedTime(&millisec, tStart, tStop);
-            printf("INFO: %0.2f ms to process data\n", millisec);
-
-            /* Move Q(\phi), U(\phi) and P(\phi) to host */
         }
+        cudaEventRecord(tStop);
+        cudaEventSynchronize(tStop);
+        cudaEventElapsedTime(&millisec, tStart, tStop);
+        printf("INFO: %0.2f ms to read fits data\n", millisec);
+            
+        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
+        cudaEventRecord(tStart);
+        computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
+                         params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
+                         d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
+        cudaThreadSynchronize();
+        cudaEventRecord(tStop);
+        cudaEventSynchronize(tStop);
+        cudaEventElapsedTime(&millisec, tStart, tStop);
+        printf("INFO: Took %0.2f ms to process a row\n", millisec);
+
+        /* Move Q(\phi), U(\phi) and P(\phi) to host */
         break;
     }
     cudaEventRecord(stopEvent);
@@ -314,27 +306,33 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 *
 *************************************************************/
 extern "C"
-__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nChan, 
-                           float K, float *d_qPhi, float *d_uPhi, float *d_pPhi, 
-                           float *d_phiAxis, int nPhi, float *d_lambdaDiff2) {
+__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS, 
+                           int nChan, float K, float *d_qPhi, float *d_uPhi, 
+                           float *d_pPhi, float *d_phiAxis, int nPhi, 
+                           float *d_lambdaDiff2) {
     int i;
-    const int index   = blockIdx.x*blockDim.x + threadIdx.x;
-    const float myphi = d_phiAxis[index];
+    float myphi;
+    /* xIndex tells me what my phi is */
+    const int xIndex = blockIdx.x*blockDim.x + threadIdx.x;
+    /* yIndex tells me which LOS I am */
+    const int yIndex = blockIdx.y*nPhi;
     float qPhi, uPhi, pPhi;
-    qPhi = 0; uPhi = 0;
 
-    if(index < nPhi) {
+    if(xIndex < nPhi) {
+        myphi = d_phiAxis[xIndex];
+        /* qPhi and uPhi are accumulators. So initialize to 0 */
+        qPhi = 0.0; uPhi = 0.0;
         for(i=0; i<nChan; i++) {
-            qPhi += d_qImageArray[i]*cosf(myphi*d_lambdaDiff2[i]) + 
-                    d_uImageArray[i]*sinf(myphi*d_lambdaDiff2[i]);
-            uPhi += d_uImageArray[i]*cosf(myphi*d_lambdaDiff2[i]) -
-                    d_qImageArray[i]*cosf(myphi*d_lambdaDiff2[i]);
+            qPhi += d_qImageArray[yIndex+i]*cosf(myphi*d_lambdaDiff2[yIndex+i]) + 
+                    d_uImageArray[yIndex+i]*sinf(myphi*d_lambdaDiff2[yIndex+i]);
+            uPhi += d_uImageArray[yIndex+i]*cosf(myphi*d_lambdaDiff2[yIndex+i]) -
+                    d_qImageArray[yIndex+i]*cosf(myphi*d_lambdaDiff2[yIndex+i]);
         }
         pPhi = sqrt(qPhi*qPhi + uPhi*uPhi);
 
-        d_qPhi[index] = K*qPhi;
-        d_uPhi[index] = K*uPhi;
-        d_pPhi[index] = K*pPhi;
+        d_qPhi[xIndex] = K*qPhi;
+        d_uPhi[xIndex] = K*uPhi;
+        d_pPhi[xIndex] = K*pPhi;
     }
 }
 
