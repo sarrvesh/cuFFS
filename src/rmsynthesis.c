@@ -44,7 +44,6 @@ int main(int argc, char *argv[]) {
     struct optionsList inOptions;
     struct parList params;
     int fitsStatus;
-    int status;
     int nDevices;
     int selectedDevice;
     struct deviceInfoList *gpuList;
@@ -116,11 +115,11 @@ int main(int argc, char *argv[]) {
         fitsStatus = SUCCESS;
         fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, 
                        &fitsStatus);
-        checkFitsError(status);
+        checkFitsError(fitsStatus);
     }
     
     /* Gather information from input image fits header */
-    status = getFitsHeader(&inOptions, &params);
+    fitsStatus = getFitsHeader(&inOptions, &params);
     checkFitsError(fitsStatus);
     
     /* Read frequency list */
