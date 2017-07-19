@@ -160,6 +160,8 @@ int main(int argc, char *argv[]) {
     free(params.rmsfReal);
     free(params.rmsfImag);
     free(params.phiAxis);
+    free(params.freqList);
+    free(params.lambda2);
 
     /* Close all open files */
     fits_close_file(params.qFile, &fitsStatus);

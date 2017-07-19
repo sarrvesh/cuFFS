@@ -286,6 +286,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Free all the allocated memory */
     cudaFreeHost(qImageArray); cudaFreeHost(uImageArray);
+    cudaFreeHost(qPhi); cudaFreeHost(uPhi); cudaFreeHost(pPhi);
+    free(lambdaDiff2); cudaFree(d_lambdaDiff2);
+    cudaFree(d_phiAxis);
+    cudaEventDestroy(startEvent); cudaEventDestroy(stopEvent);
+    cudaEventDestroy(tStart); cudaEventDestroy(tStop);    
     
     return(SUCCESS);
 }

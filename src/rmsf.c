@@ -92,6 +92,7 @@ void getMedianLambda20(struct parList *params) {
     
     /* Find the median value of the sorted list */
     params->lambda20 = tempArray[params->qAxisLen3/2];
+    free(tempArray);
 }
 
 /*************************************************************
