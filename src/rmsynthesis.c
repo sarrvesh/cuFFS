@@ -157,6 +157,15 @@ int main(int argc, char *argv[]) {
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
 
     /* Free up all allocated memory */
+    free(params.rmsf);
+    free(params.rmsfReal);
+    free(params.rmsfImag);
+    free(params.phiAxis);
+
+    /* Close all open files */
+    fits_close_file(params.qFile, &fitsStatus);
+    fits_close_file(params.uFile, &fitsStatus);
+    if(inOptions.isImageMaskDefined == TRUE) { fits_close_file(params.maskFile, &fitsStatus); }
     
     /* Estimate the execution time */
     endTime = clock();
