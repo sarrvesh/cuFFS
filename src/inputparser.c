@@ -50,7 +50,7 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Get the names of fits files */
     if(config_lookup_string(&cfg, "qCubeName", &str)) {
-        inOptions.qCubeName = malloc(strlen(str));
+        inOptions.qCubeName = malloc(strlen(str)+1);
         strcpy(inOptions.qCubeName, str);
     }
     else {
@@ -59,7 +59,7 @@ struct optionsList parseInput(char *parsetFileName) {
         exit(FAILURE);
     }
     if(config_lookup_string(&cfg, "uCubeName", &str)) {
-        inOptions.uCubeName = malloc(strlen(str));
+        inOptions.uCubeName = malloc(strlen(str)+1);
         strcpy(inOptions.uCubeName, str);
     }
     else {
@@ -70,7 +70,7 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Get the name of the frequency file */
     if(config_lookup_string(&cfg, "freqFileName", &str)) {
-        inOptions.freqFileName = malloc(strlen(str));
+        inOptions.freqFileName = malloc(strlen(str)+1);
         strcpy(inOptions.freqFileName, str);
     }
     else {
@@ -85,20 +85,20 @@ struct optionsList parseInput(char *parsetFileName) {
         inOptions.isImageMaskDefined = FALSE;
     }
     else {
-        inOptions.imageMask = malloc(strlen(str));
+        inOptions.imageMask = malloc(strlen(str)+1);
         strcpy(inOptions.imageMask, str);
         inOptions.isImageMaskDefined = TRUE;
     }
 
     /* Get prefix for output files */
     if(config_lookup_string(&cfg, "outPrefix", &str)) {
-        inOptions.outPrefix = malloc(strlen(str));
+        inOptions.outPrefix = malloc(strlen(str)+1);
         strcpy(inOptions.outPrefix, str);
     }
     else {
         printf("INFO: 'outPrefix' is not defined. Defaulting to %s\n\n", 
                 DEFAULT_OUT_PREFIX);
-        inOptions.outPrefix = malloc(strlen(DEFAULT_OUT_PREFIX));
+        inOptions.outPrefix = malloc(strlen(DEFAULT_OUT_PREFIX)+1);
         strcpy(inOptions.outPrefix, DEFAULT_OUT_PREFIX);
     }
     
