@@ -27,21 +27,10 @@ extern "C" {
 #include "constants.h"
 #include "devices.h"
 #include "fileaccess.h"
-__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
-                         float *d_qPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float dlambda2);
-__global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
-                         float *d_uPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float dlambda2);
-__global__ void initializeQUP(float *d_qPhi, float *d_uPhi, 
-                              float *d_pPhi, int nPhi);
-__global__ void computeP(float *d_qPhi, float *d_uPhi, float *d_pPhi);
 __global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS, 
                            int nChan, float K, float *d_qPhi, float *d_uPhi, 
                            float *d_pPhi, float *d_phiAxis, int nPhi, 
                            float *d_lambdaDiff2);
-void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
-                           struct deviceInfoList selectedDeviceInfo);
 }
 
 /*************************************************************
@@ -198,7 +187,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     dim3 calcThreadSize, calcBlockSize;
     cudaEvent_t startEvent, stopEvent;
     cudaEvent_t tStart, tStop;
-    float millisec = 0.;
+    float millisec = 0., totMilliSec = 0.;
     long fPixel[params->qAxisLen3];
     int fitsStatus = 0;
     
@@ -250,7 +239,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     calcThreadSize.x = selectedDeviceInfo.warpSize;
     calcBlockSize.y  = params->qAxisLen2;
     calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
-    printf("INFO: Launching (%d,%d,1) blocks each with %d threads\n", 
+    printf("INFO: Launching %dx%d blocks each with %d threads\n", 
             calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
 
     /* Process each line of sight individually */
@@ -284,15 +273,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
         cudaEventRecord(tStop);
         cudaEventSynchronize(tStop);
         cudaEventElapsedTime(&millisec, tStart, tStop);
+        totMilliSec += millisec;
         printf("INFO: Took %0.2f ms to process a row\n", millisec);
 
         /* Move Q(\phi), U(\phi) and P(\phi) to host */
-        break;
     }
     cudaEventRecord(stopEvent);
     cudaEventSynchronize(stopEvent);
     cudaEventElapsedTime(&millisec, startEvent, stopEvent);
     printf("INFO: Time to process the cubes: %0.2f ms.\n", millisec);
+    printf("INFO: Time spent on GPU compute: %0.2f ms.\n", totMilliSec);
 
     /* Free all the allocated memory */
     cudaFreeHost(qImageArray); cudaFreeHost(uImageArray);
@@ -338,54 +328,6 @@ __global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS,
 
 /*************************************************************
 *
-* Device code to compute Q(\phi)
-*
-*************************************************************/
-extern "C"
-__global__ void computeQ(float *d_qImageArray, float *d_uImageArray, 
-                         float *d_qPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float dlambda2) {
-    int i;
-    const int index = blockIdx.x*blockDim.x + threadIdx.x;
-    const int offset = index*nElements;
-    const float thisPhi = d_phiAxis[index];    
-    const float thisCos = cosf(2*thisPhi*dlambda2);
-    const float thisSin = sinf(2*thisPhi*dlambda2);
-
-    if(index < nPhi) {
-        /* For each element in Q, compute Q(thisPhi) and add it to Q(phi) */
-        for(i=0; i<nElements; i++)
-            d_qPhi[offset+i] += d_qImageArray[i]*thisCos - 
-                                d_uImageArray[i]*thisSin;
-    }
-}
-
-/*************************************************************
-*
-* Device code to compute U(\phi)
-*
-*************************************************************/
-extern "C"
-__global__ void computeU(float *d_qImageArray, float *d_uImageArray, 
-                         float *d_uPhi, float *d_phiAxis, int nPhi, 
-                         int nElements, float dlambda2) {
-    int i;
-    const int index = blockIdx.x*blockDim.x + threadIdx.x;
-    const int offset = index*nElements;
-    const float thisPhi = d_phiAxis[index];
-    const float thisCos = cosf(2*thisPhi*dlambda2);
-    const float thisSin = sinf(2*thisPhi*dlambda2);
-
-    if(index < nPhi) {
-        /* For each element in U, compute U(thisPhi) and add it to U(phi) */
-        for(i=0; i<nElements; i++) 
-            d_uPhi[offset+i] += d_uImageArray[i]*thisCos - 
-                                d_qImageArray[i]*thisSin;
-    }
-}
-
-/*************************************************************
-*
 * Initialize Q(\phi) and U(\phi)
 *
 *************************************************************/
@@ -398,46 +340,5 @@ __global__ void initializeQUP(float *d_qPhi, float *d_uPhi,
         d_qPhi[index] = 0.0;
         d_uPhi[index] = 0.0;
         d_pPhi[index] = 0.0;
-    }
-}
-
-/*************************************************************
-*
-* Estimate the optimal number of block and thread size 
-*  for RM Synthesis.
-*
-*************************************************************/
-extern "C"
-void getGpuAllocForRMSynth(int *blockSize, int *threadSize, int nPhi,
-                           struct deviceInfoList selectedDeviceInfo) {
-    *threadSize = selectedDeviceInfo.warpSize;
-    if(!(*blockSize = nPhi/(*threadSize))) { *blockSize = 1; }
-}
-
-/*************************************************************
-*
-* Estimate the optimal number of block, thread and memory to
-*  compute P from Q and U images/cubes.
-*
-*************************************************************/
-extern "C"
-void getGpuAllocForP(int *blockSize, int *threadSize, long *nFrames, 
-                     int nImRows, int nRowElements, 
-                     struct deviceInfoList selectedDeviceInfo) {
-    long totalThreads;
-
-    /* How many phi frames can be stored in gpu at a time */
-    *nFrames = (int)(selectedDeviceInfo.globalMem % 
-              (3*nImRows*nRowElements*sizeof(float)));
-    
-    /* Determine the thread and block size */
-    totalThreads = *nFrames;
-    if(totalThreads <= selectedDeviceInfo.maxThreadPerBlock) {
-        *threadSize = totalThreads;
-        *blockSize = 1;
-    }
-    else {
-        *threadSize = selectedDeviceInfo.maxThreadPerBlock;
-        *blockSize = (totalThreads % selectedDeviceInfo.maxThreadPerBlock) + 1;
     }
 }
