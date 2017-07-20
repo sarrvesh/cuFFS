@@ -185,14 +185,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     float *qPhi, *uPhi, *pPhi;
     float *d_phiAxis;
     dim3 calcThreadSize, calcBlockSize;
+    cudaEvent_t readStart, readStop;
     cudaEvent_t gpuStart, gpuStop;
     cudaEvent_t totStart, totStop;
-    float tempTime, gpuTime = 0, totTime = 0;
+    float tempTime, gpuTime = 0, totTime = 0, readTime = 0;
     long *fPixel, *lPixel, *inc, *nAxis;
     int fitsStatus = 0;
     
     /* Initialize the events first */
     cudaEventCreate(&gpuStart); cudaEventCreate(&gpuStop);
+    cudaEventCreate(&readStart); cudaEventCreate(&readStop);
     cudaEventCreate(&totStart); cudaEventCreate(&totStop);
     
     /* Set some pixel access limits */
@@ -259,6 +261,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     for(i=1; i<=params->qAxisLen1; i++) {
         fPixel[1] = i; lPixel[1] = i;
         /* Read all lines of sight in each row separately */
+        cudaEventRecord(readStart);
         for(j=1; j<=params->qAxisLen2; j++) {
             fPixel[0] = j; lPixel[0] = j;
             inputIdx = (j-1)*params->qAxisLen2;
@@ -270,7 +273,13 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                                  NULL, &fitsStatus);
             checkFitsError(fitsStatus);
         }
-            
+        cudaEventRecord(readStop);
+        cudaEventSynchronize(readStop);
+        tempTime = 0;
+        cudaEventElapsedTime(&tempTime, readStart, readStop);
+        readTime += tempTime;
+        printf("INFO: Read time/row: %0.2fms. ", tempTime);
+ 
         /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
         cudaEventRecord(gpuStart);
         computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
@@ -281,7 +290,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
         tempTime = 0;
         cudaEventElapsedTime(&tempTime, gpuStart, gpuStop);
         gpuTime += tempTime;
-        printf("INFO: Time for this row: %0.2fms\n", tempTime);
+        printf("INFO: Compute time/row: %0.2fms.\n", tempTime);
 
         /* Move Q(\phi), U(\phi) and P(\phi) to host */
     }
@@ -290,8 +299,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaEventElapsedTime(&totTime, totStart, totStop);
     
     /* Print time information */
-    printf("INFO: Total compute time:\t%0.2f s\n", totTime*KILO);
-    printf("INFO: Compute time on GPU:\t%0.2f ms\n", gpuTime);
+    printf("\n");
+    printf("INFO: Total compute time: %0.2f s\n", totTime/KILO);
+    printf("INFO: Total I/O time: %0.2f s\n", readTime/KILO);
+    printf("INFO: Compute time on GPU: %0.2f ms\n", gpuTime);
 
     /* Free all the allocated memory */
     cudaFreeHost(qImageArray); cudaFreeHost(uImageArray);
