@@ -178,49 +178,49 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int i, j, k; 
     int inputIdx, outputIdx;
     float *lambdaDiff2, *d_lambdaDiff2;
-    size_t size;
+    size_t sizeInArray, sizeOutArray, sizePhiArray, sizeLambda;
     float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
     float *d_qPhi, *d_uPhi, *d_pPhi;
     float *qPhi, *uPhi, *pPhi;
     float *d_phiAxis;
     dim3 calcThreadSize, calcBlockSize;
-    cudaEvent_t startEvent, stopEvent;
-    cudaEvent_t tStart, tStop;
-    float millisec = 0., totMilliSec = 0.;
+    cudaEvent_t gpuStart, gpuStop;
+    cudaEvent_t totStart, totStop;
+    float tempTime, gpuTime = 0, totTime = 0;
     long fPixel[params->qAxisLen3];
     int fitsStatus = 0;
     
-    /* Initialize CUDA events to measure time */
-    cudaEventCreate(&startEvent); cudaEventCreate(&tStart);
-    cudaEventCreate(&stopEvent);  cudaEventCreate(&tStop);
+    /* Initialize the events first */
+    cudaEventCreate(&gpuStart); cudaEventCreate(&gpuStop);
+    cudaEventCreate(&totStart); cudaEventCreate(&totStop);
 
     /* Compute \lambda^2 - \lambda^2_0 once. Common for all threads */
-    lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(lambdaDiff2));
+    lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(*lambdaDiff2));
     if(lambdaDiff2 == NULL) {
         printf("ERROR: Mem alloc failed for lambdaDiff2\n\n");
         return(FAILURE);
     }
     for(i=0;i<params->qAxisLen3;i++)
         lambdaDiff2[i] = 2.0*(params->lambda2[i]-params->lambda20);
-    size = sizeof(d_lambdaDiff2)*params->qAxisLen3;
-    cudaMalloc(&d_lambdaDiff2, size);
-    cudaMemcpy(d_lambdaDiff2, lambdaDiff2, size, cudaMemcpyHostToDevice);
+    sizeLambda = sizeof(*d_lambdaDiff2)*params->qAxisLen3;
+    cudaMalloc(&d_lambdaDiff2, sizeLambda);
+    cudaMemcpy(d_lambdaDiff2, lambdaDiff2, sizeLambda, cudaMemcpyHostToDevice);
     
     /* Allocate input arrays on CPU */
-    size = params->qAxisLen3*params->qAxisLen2*sizeof(qImageArray);
-    cudaHostAlloc( (void**)&qImageArray, size,
+    sizeInArray = params->qAxisLen3*params->qAxisLen2*sizeof(*qImageArray);
+    cudaHostAlloc( (void**)&qImageArray, sizeInArray,
                  cudaHostAllocWriteCombined | cudaHostAllocMapped);
-    cudaHostAlloc( (void**)&uImageArray, size,
+    cudaHostAlloc( (void**)&uImageArray, sizeInArray,
                  cudaHostAllocWriteCombined | cudaHostAllocMapped);
     /* Get pointers to input arrays on GPU */
     cudaHostGetDevicePointer(&d_qImageArray, qImageArray, 0);
     cudaHostGetDevicePointer(&d_uImageArray, uImageArray, 0);
     /* Allocate output arrays on CPU */
-    size = sizeof(qPhi)*inOptions->nPhi*params->qAxisLen2;
-    cudaHostAlloc( (void**)&qPhi, size, cudaHostAllocMapped);
-    cudaHostAlloc( (void**)&uPhi, size, cudaHostAllocMapped);
-    cudaHostAlloc( (void**)&pPhi, size, cudaHostAllocMapped);
+    sizeOutArray = sizeof(*qPhi)*inOptions->nPhi*params->qAxisLen2;
+    cudaHostAlloc( (void**)&qPhi, sizeOutArray, cudaHostAllocMapped);
+    cudaHostAlloc( (void**)&uPhi, sizeOutArray, cudaHostAllocMapped);
+    cudaHostAlloc( (void**)&pPhi, sizeOutArray, cudaHostAllocMapped);
     /* Get pointers to output arrays on GPU */
     cudaHostGetDevicePointer(&d_qPhi, qPhi, 0);
     cudaHostGetDevicePointer(&d_uPhi, uPhi, 0);
@@ -228,12 +228,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     checkCudaError();
     
     /* Allocate and transfer phi axis info. Common for all threads */
-    cudaMalloc(&d_phiAxis, size);
-    cudaMemcpy(d_phiAxis, params->phiAxis, size, cudaMemcpyHostToDevice);
+    printf("INFO: Size of phiAxis is %ld and float is %ld\n", sizeof(params->phiAxis), sizeof(float));
+    sizePhiArray = sizeof(params->phiAxis)*inOptions->nPhi; 
+    cudaMalloc(&d_phiAxis, sizePhiArray);
+    cudaMemcpy(d_phiAxis, params->phiAxis, sizePhiArray, cudaMemcpyHostToDevice);
     checkCudaError();
-
-    /* Start the clock */
-    cudaEventRecord(startEvent);
 
     /* Determine what the appropriate block and grid sizes are */
     calcThreadSize.x = selectedDeviceInfo.warpSize;
@@ -243,10 +242,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
             calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
 
     /* Process each line of sight individually */
+    cudaEventRecord(totStart);
     for(i=1; i<=params->qAxisLen1; i++) {
         fPixel[1] = i;
         /* Read all lines of sight in each row separately */
-        cudaEventRecord(tStart);
         for(j=1; j<=params->qAxisLen2; j++) {
             fPixel[0] = j;
             for(k=1; k<=params->qAxisLen3; k++) {
@@ -259,38 +258,33 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                checkFitsError(fitsStatus);
             }
         }
-        cudaEventRecord(tStop);
-        cudaEventSynchronize(tStop);
-        cudaEventElapsedTime(&millisec, tStart, tStop);
-        printf("INFO: %0.2f ms to read fits data\n", millisec);
             
         /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
-        cudaEventRecord(tStart);
+        cudaEventRecord(gpuStart);
         computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
                          params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
-        cudaThreadSynchronize();
-        cudaEventRecord(tStop);
-        cudaEventSynchronize(tStop);
-        cudaEventElapsedTime(&millisec, tStart, tStop);
-        totMilliSec += millisec;
-        printf("INFO: Took %0.2f ms to process a row\n", millisec);
+        cudaEventRecord(gpuStop);
+        cudaEventSynchronize(gpuStop);
+        tempTime = 0;
+        cudaEventElapsedTime(&tempTime, gpuStart, gpuStop);
+        gpuTime += tempTime;
 
         /* Move Q(\phi), U(\phi) and P(\phi) to host */
     }
-    cudaEventRecord(stopEvent);
-    cudaEventSynchronize(stopEvent);
-    cudaEventElapsedTime(&millisec, startEvent, stopEvent);
-    printf("INFO: Time to process the cubes: %0.2f ms.\n", millisec);
-    printf("INFO: Time spent on GPU compute: %0.2f ms.\n", totMilliSec);
+    cudaEventRecord(totStop);
+    cudaEventSynchronize(totStop);
+    cudaEventElapsedTime(&totTime, totStart, totStop);
+    
+    /* Print time information */
+    printf("INFO: Total compute time:\t%0.2f s\n", totTime*KILO);
+    printf("INFO: Compute time on GPU:\t%0.2f ms\n", gpuTime);
 
     /* Free all the allocated memory */
     cudaFreeHost(qImageArray); cudaFreeHost(uImageArray);
     cudaFreeHost(qPhi); cudaFreeHost(uPhi); cudaFreeHost(pPhi);
     free(lambdaDiff2); cudaFree(d_lambdaDiff2);
     cudaFree(d_phiAxis);
-    cudaEventDestroy(startEvent); cudaEventDestroy(stopEvent);
-    cudaEventDestroy(tStart); cudaEventDestroy(tStop);    
     
     return(SUCCESS);
 }
