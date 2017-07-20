@@ -162,6 +162,11 @@ int main(int argc, char *argv[]) {
     free(params.phiAxis);
     free(params.freqList);
     free(params.lambda2);
+    free(inOptions.qCubeName);
+    free(inOptions.uCubeName);
+    free(inOptions.freqFileName);
+    free(inOptions.outPrefix);
+    if(inOptions.isImageMaskDefined == TRUE) { free(inOptions.imageMask); }
 
     /* Close all open files */
     fits_close_file(params.qFile, &fitsStatus);

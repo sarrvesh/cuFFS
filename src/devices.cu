@@ -228,8 +228,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     checkCudaError();
     
     /* Allocate and transfer phi axis info. Common for all threads */
-    printf("INFO: Size of phiAxis is %ld and float is %ld\n", sizeof(params->phiAxis), sizeof(float));
-    sizePhiArray = sizeof(params->phiAxis)*inOptions->nPhi; 
+    sizePhiArray = sizeof(*(params->phiAxis))*inOptions->nPhi; 
     cudaMalloc(&d_phiAxis, sizePhiArray);
     cudaMemcpy(d_phiAxis, params->phiAxis, sizePhiArray, cudaMemcpyHostToDevice);
     checkCudaError();
@@ -271,6 +270,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
         gpuTime += tempTime;
 
         /* Move Q(\phi), U(\phi) and P(\phi) to host */
+        break;
     }
     cudaEventRecord(totStop);
     cudaEventSynchronize(totStop);
