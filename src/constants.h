@@ -37,6 +37,8 @@ extern "C"
 
 #define NUM_INPUTS 2
 
+#define ZERO 0
+
 #define SUCCESS 0
 #define FAILURE 1
 

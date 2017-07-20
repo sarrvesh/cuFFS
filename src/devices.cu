@@ -175,8 +175,8 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    int i, j, k; 
-    int inputIdx, outputIdx;
+    int i, j; 
+    int inputIdx;
     float *lambdaDiff2, *d_lambdaDiff2;
     size_t sizeInArray, sizeOutArray, sizePhiArray, sizeLambda;
     float *qImageArray, *uImageArray;
@@ -188,12 +188,25 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaEvent_t gpuStart, gpuStop;
     cudaEvent_t totStart, totStop;
     float tempTime, gpuTime = 0, totTime = 0;
-    long fPixel[params->qAxisLen3];
+    long *fPixel, *lPixel, *inc, *nAxis;
     int fitsStatus = 0;
     
     /* Initialize the events first */
     cudaEventCreate(&gpuStart); cudaEventCreate(&gpuStop);
     cudaEventCreate(&totStart); cudaEventCreate(&totStop);
+    
+    /* Set some pixel access limits */
+    fPixel = (long *)calloc(params->qAxisNum, sizeof(*fPixel));
+    lPixel = (long *)calloc(params->qAxisNum, sizeof(*lPixel));
+    inc    = (long *)calloc(params->qAxisNum, sizeof(*inc));
+    nAxis  = (long *)calloc(params->qAxisNum, sizeof(*nAxis));
+    fPixel[0] = 1; lPixel[0] = 1;
+    fPixel[1] = 1; lPixel[1] = 1;
+    fPixel[2] = 1; lPixel[2] = params->qAxisLen3;
+    inc[0] = 1; inc[1] = 1; inc[2] = 1;
+    nAxis[0] = params->qAxisLen1;
+    nAxis[1] = params->qAxisLen2;
+    nAxis[2] = params->qAxisLen3;
 
     /* Compute \lambda^2 - \lambda^2_0 once. Common for all threads */
     lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(*lambdaDiff2));
@@ -242,20 +255,20 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Process each line of sight individually */
     cudaEventRecord(totStart);
+    fPixel[2] = 1; lPixel[2] = params->qAxisLen3;
     for(i=1; i<=params->qAxisLen1; i++) {
-        fPixel[1] = i;
+        fPixel[1] = i; lPixel[1] = i;
         /* Read all lines of sight in each row separately */
         for(j=1; j<=params->qAxisLen2; j++) {
-            fPixel[0] = j;
-            for(k=1; k<=params->qAxisLen3; k++) {
-               fPixel[2] = k;
-               inputIdx = (j-1)*params->qAxisLen2 + (k-1);
-               fits_read_pix(params->qFile, TFLOAT, fPixel, 1, NULL, 
-                             &(qImageArray[inputIdx]), NULL, &fitsStatus);
-               fits_read_pix(params->uFile, TFLOAT, fPixel, 1, NULL,
-                             &(uImageArray[inputIdx]), NULL, &fitsStatus);
-               checkFitsError(fitsStatus);
-            }
+            fPixel[0] = j; lPixel[0] = j;
+            inputIdx = (j-1)*params->qAxisLen2;
+            fits_read_subset_flt(params->qFile, ZERO, params->qAxisNum, nAxis, fPixel,
+                                 lPixel, inc, ZERO, &(qImageArray[inputIdx]),
+                                 NULL, &fitsStatus);
+            fits_read_subset_flt(params->uFile, ZERO, params->uAxisNum, nAxis, fPixel,
+                                 lPixel, inc, ZERO, &(uImageArray[inputIdx]),
+                                 NULL, &fitsStatus);
+            checkFitsError(fitsStatus);
         }
             
         /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
@@ -268,9 +281,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
         tempTime = 0;
         cudaEventElapsedTime(&tempTime, gpuStart, gpuStop);
         gpuTime += tempTime;
+        printf("INFO: Time for this row: %0.2fms\n", tempTime);
 
         /* Move Q(\phi), U(\phi) and P(\phi) to host */
-        break;
     }
     cudaEventRecord(totStop);
     cudaEventSynchronize(totStop);
