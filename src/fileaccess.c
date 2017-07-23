@@ -122,8 +122,8 @@ void makeOutputImages(struct optionsList *inOptions, struct parList *params) {
    
    /* What are the output cube sizes */
    naxis[0] = inOptions->nPhi;
-   naxis[1] = params->qAxisLen1;
-   naxis[2] = params->qAxisLen2;
+   naxis[1] = params->qAxisLen2;
+   naxis[2] = params->qAxisLen3;
    
    /* Create the header for each output image */
    fits_create_img(params->qDirty, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
