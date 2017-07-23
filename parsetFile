@@ -2,8 +2,8 @@
 nGPU = 1;
 
 // Define how fits files are stored on disk
-qCubeName = "/data/see041/wsrt_sings/cube-Q.fits";
-uCubeName = "/data/see041/wsrt_sings/cube-U.fits";
+qCubeName = "/data/see041/wsrt_sings/cube-Q.rot.fits";
+uCubeName = "/data/see041/wsrt_sings/cube-U.rot.fits";
 freqFileName = "/data/see041/wsrt_sings/frequencies-Q.txt";
 //qCubeName = "/home/see041/RMSynth_GPU/testFiles/q.sub.fits";
 //uCubeName = "/home/see041/RMSynth_GPU/testFiles/u.sub.fits";
@@ -15,7 +15,7 @@ freqFileName = "/data/see041/wsrt_sings/frequencies-Q.txt";
 // Define the faraday depth axis. All units in rad/m/m
 plotRMSF = False;
 phiMin = -500.;
-nPhi = 1000; // integer
+nPhi = 10000; // integer
 dPhi = 2.5;
 
 // Prefix for output filenames

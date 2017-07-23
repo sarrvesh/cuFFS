@@ -18,4 +18,5 @@ See build_brinkley.sh for sample compiler instruction.
 
 Notes
 =====
-The code assumes that the pixels values are IEEE single precision floating points (BITPIX=-32) and that the input cubes have 3 axes (2 spatial dimensions and 1 frequency axis). If you have individual stokes Q and U channel maps, use the helper/makeFitsCube.py to get the data in the required format.
+* The code assumes that the pixels values are IEEE single precision floating points (BITPIX=-32)
+* The input cubes must have 3 axes (2 spatial dimensions and 1 frequency axis) with frequency axis as NAXIS1. If you have individual stokes Q and U channel maps, use the helper/makeFitsCube.py to get the data in the required format.
