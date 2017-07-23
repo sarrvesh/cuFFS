@@ -91,6 +91,21 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
 
 /*************************************************************
 *
+* Create output images
+*
+*************************************************************/
+int makeOutputImages(struct optionsList *inOptions, struct parList *params) {
+   int fitsStatus = 0;
+
+   /* */
+   /* Create the image HDU's */
+   fits_create_image(params->q
+
+   return(fitsStatus);
+}
+
+/*************************************************************
+*
 * Read the list of frequencies from the input freq file
 *
 *************************************************************/
@@ -98,12 +113,12 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     int i;
     float tempFloat;
     
-    params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
+    params->freqList = calloc(params->qAxisLen1, sizeof(params->freqList));
     if(params->freqList == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
-    for(i=0; i<params->qAxisLen3; i++) {
+    for(i=0; i<params->qAxisLen1; i++) {
         fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
             printf("Error: Frequency values and fits frames don't match\n");
@@ -117,13 +132,13 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     }
     
     /* Compute \lambda^2 from the list of generated frequencies */
-    params->lambda2  = calloc(params->qAxisLen3, sizeof(params->lambda2));
+    params->lambda2  = calloc(params->qAxisLen1, sizeof(params->lambda2));
     if(params->lambda2 == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     params->lambda20 = 0.0;
-    for(i=0; i<params->qAxisLen3; i++)
+    for(i=0; i<params->qAxisLen1; i++)
         params->lambda2[i] = (LIGHTSPEED / params->freqList[i]) * 
                              (LIGHTSPEED / params->freqList[i]);
     

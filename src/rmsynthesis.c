@@ -121,6 +121,10 @@ int main(int argc, char *argv[]) {
     /* Gather information from input image fits header */
     fitsStatus = getFitsHeader(&inOptions, &params);
     checkFitsError(fitsStatus);
+
+    /* Create the output images */
+    fitsStatus = makeOutputImages(&inOptions, &params);
+    checkFitsError(fitsStatus);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params))
