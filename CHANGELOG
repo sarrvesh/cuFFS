@@ -1,4 +1,6 @@
 VERSION  FEATURES
 =======  ======================================================================
-V0.1     Code tested using a single GPU on the Bracewell cluster. Tagged on 
-            July 11, 2017.
+V0.1     Code tested using a single GPU on the Bracewell cluster. 
+         Tagged on July 11, 2017. 
+         Separate kernels for Q and U.
+         Input cubes are processed frame-by-frame.
