@@ -47,6 +47,7 @@ struct optionsList {
 struct parList {
     fitsfile *qFile, *uFile;
     fitsfile *maskFile;
+    fitsfile *qDirty, *uDirty, *pDirty;
     FILE *freq;
     
     int qAxisNum, uAxisNum;

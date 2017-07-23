@@ -123,8 +123,7 @@ int main(int argc, char *argv[]) {
     checkFitsError(fitsStatus);
 
     /* Create the output images */
-    fitsStatus = makeOutputImages(&inOptions, &params);
-    checkFitsError(fitsStatus);
+    makeOutputImages(&inOptions, &params);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params))
@@ -175,7 +174,11 @@ int main(int argc, char *argv[]) {
     /* Close all open files */
     fits_close_file(params.qFile, &fitsStatus);
     fits_close_file(params.uFile, &fitsStatus);
+    fits_close_file(params.qDirty, &fitsStatus);
+    fits_close_file(params.uDirty, &fitsStatus);
+    fits_close_file(params.pDirty, &fitsStatus);
     if(inOptions.isImageMaskDefined == TRUE) { fits_close_file(params.maskFile, &fitsStatus); }
+    checkFitsError(fitsStatus);
     
     /* Estimate the execution time */
     endTime = clock();

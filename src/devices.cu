@@ -268,12 +268,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        cudaMemcpy(d_pPhi, pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
 
        /* Write the output cubes to disk */
-       fits_write_pix(params->qPhi, TFLOAT, fPixel, nOutElements, 
-                      NULL, qPhi, NULL, &fitsStatus);
-       fits_write_pix(params->uPhi, TFLOAT, fPixel, nOutElements,
-                      NULL, uPhi, NULL, &fitsStatus);
-       fits_write_pix(params->pPhi, TFLOAT, fPixel, nOutElements,
-                      NULL, pPhi, NULL, &fitsStatus);
+       fits_write_pix(params->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
+       fits_write_pix(params->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
+       fits_write_pix(params->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
        checkFitsError(fitsStatus);
     }
     
