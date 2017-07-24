@@ -48,6 +48,28 @@ struct optionsList parseInput(char *parsetFileName) {
         exit(FAILURE);
     }
     
+    /* Get the input file format */
+    if(config_lookup_string(&cfg, "fileFormat", &str)) {
+        inOptions.fileFormat = malloc(strlen(str)+1);
+        strcpy(inOptions.qCubeName, str);
+    }
+    else {
+        printf("Error: 'fileFormat' undefined in parset\n\n");
+        config_destroy(&cfg);
+        exit(FAILURE);
+    }
+    if((!(strcasecmp(inOptions.fileFormat, FITS)) || 
+          strcasecmp(inOptions.fileFormat, HDF5))) {
+        printf("Error: 'fileFormat' has to be FITS or HDF5\n\n");
+        config_destroy(&cfg);
+        exit(FAILURE);
+    }
+    if(strcasecmp(inOptions.fileFormat, HDF5)) {
+        printf("ERROR: HDF5 is not supported in this version\n\n");
+        config_destroy(&cfg);
+        exit(FAILURE);
+    }
+    
     /* Get the names of fits files */
     if(config_lookup_string(&cfg, "qCubeName", &str)) {
         inOptions.qCubeName = malloc(strlen(str)+1);

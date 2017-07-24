@@ -64,4 +64,7 @@ extern "C"
 #define SEC_PER_MIN 60
 #define SEC_PER_HOUR 3600
 
+#define FITS "FITS"
+#define HDF5 "HDF5"
+
 #endif

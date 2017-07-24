@@ -1,5 +1,10 @@
-// How many GPUs to use
+// How many GPUs to use?
+// At the moment, this should be set to 1.
 nGPU = 1;
+
+// What is the input format? (not case-sensitive)
+// Can be "FITS" or "HDF5". 
+fileFormat = "FITS";
 
 // Define how fits files are stored on disk
 qCubeName = "/data/see041/wsrt_sings/cube-Q.rot.fits";

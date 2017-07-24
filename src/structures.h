@@ -29,6 +29,7 @@ extern "C"
 
 /* Structure to store the input options */
 struct optionsList {
+    char *fileFormat;
     char *qCubeName;
     char *uCubeName;
     char *freqFileName;

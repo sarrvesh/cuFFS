@@ -58,9 +58,6 @@ int main(int argc, char *argv[]) {
     
     /* Start the clock */
     startTime = clock();
-
-    /* Device variable declaration */
-    float *d_qImageArray, *d_uImageArray;
     
     printf("\n");
     printf("RM Synthesis v%s\n", VERSION_STR);
