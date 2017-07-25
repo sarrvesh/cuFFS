@@ -108,17 +108,6 @@ struct optionsList parseInput(char *parsetFileName) {
         exit(FAILURE);
     }
 
-    /* Check if an image mask is defined */
-    if(! config_lookup_string(&cfg, "imageMask", &str)) {
-        printf("INFO: Image mask not specified\n\n");
-        inOptions.isImageMaskDefined = FALSE;
-    }
-    else {
-        inOptions.imageMask = malloc(strlen(str)+1);
-        strcpy(inOptions.imageMask, str);
-        inOptions.isImageMaskDefined = TRUE;
-    }
-
     /* Get prefix for output files */
     if(config_lookup_string(&cfg, "outPrefix", &str)) {
         inOptions.outPrefix = malloc(strlen(str)+1);
@@ -184,10 +173,6 @@ void printOptions(struct optionsList inOptions, struct parList params) {
     printf("\n");
     printf("Q Cube: %s\n", inOptions.qCubeName);
     printf("U Cube: %s\n", inOptions.uCubeName);
-    if(inOptions.isImageMaskDefined == TRUE) {
-        printf("Image mask: %s\n", inOptions.imageMask);
-        printf("\n");
-    }
     printf("phi min: %.2f\n", inOptions.phiMin);
     printf("# of phi planes: %d\n", inOptions.nPhi);
     printf("delta phi: %.2lf\n", inOptions.dPhi);

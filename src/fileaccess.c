@@ -255,19 +255,3 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     
     return(SUCCESS);
 }
-
-/*************************************************************
-*
-* Read in the input mask image
-*
-*************************************************************/
-int getImageMask(struct optionsList *inOptions, struct parList *params) {
-    int fitsStatus = SUCCESS;
-    char fitsComment[FLEN_COMMENT];
-
-    fits_read_key(params->maskFile, TINT, "NAXIS1", &params->maskAxisLen1, 
-                  fitsComment, &fitsStatus);
-    fits_read_key(params->maskFile, TINT, "NAXIS2", &params->maskAxisLen2, 
-                  fitsComment, &fitsStatus);
-    return(SUCCESS);
-}

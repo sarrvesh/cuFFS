@@ -29,7 +29,6 @@ extern "C"
 
 int getFitsHeader(struct optionsList *inOptions, struct parList *params);
 int getFreqList(struct optionsList *inOptions, struct parList *params);
-int getImageMask(struct optionsList *inOptions, struct parList *params);
 void checkFitsError(int status);
 void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params);
 void checkInputFiles(struct optionsList *inOptions, struct parList *params);

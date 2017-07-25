@@ -148,7 +148,6 @@ int main(int argc, char *argv[]) {
     free(inOptions.uCubeName);
     free(inOptions.freqFileName);
     free(inOptions.outPrefix);
-    if(inOptions.isImageMaskDefined == TRUE) { free(inOptions.imageMask); }
 
     /* Close all open files */
     fits_close_file(params.qFile, &fitsStatus);
@@ -156,7 +155,6 @@ int main(int argc, char *argv[]) {
     fits_close_file(params.qDirty, &fitsStatus);
     fits_close_file(params.uDirty, &fitsStatus);
     fits_close_file(params.pDirty, &fitsStatus);
-    if(inOptions.isImageMaskDefined == TRUE) { fits_close_file(params.maskFile, &fitsStatus); }
     checkFitsError(fitsStatus);
     
     /* Estimate the execution time */

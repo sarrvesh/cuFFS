@@ -14,9 +14,6 @@ freqFileName = "/data/see041/wsrt_sings/frequencies-Q.txt";
 //uCubeName = "/home/see041/RMSynth_GPU/testFiles/u.sub.fits";
 //freqFileName = "/home/see041/RMSynth_GPU/testFiles/freqTable";
 
-// Define an image mask to select pixels
-//imageMask = "testFiles/MASK.fits";
-
 // Define the faraday depth axis. All units in rad/m/m
 plotRMSF = False;
 phiMin = -500.;

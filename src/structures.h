@@ -33,8 +33,6 @@ struct optionsList {
     char *uCubeName;
     char *freqFileName;
     char *outPrefix;
-    char *imageMask;
-    int isImageMaskDefined;
     
     int plotRMSF;
     double phiMin, dPhi;
@@ -47,7 +45,6 @@ struct optionsList {
 /* Structure to store all information related to RM Synthesis */
 struct parList {
     fitsfile *qFile, *uFile;
-    fitsfile *maskFile;
     fitsfile *qDirty, *uDirty, *pDirty;
     FILE *freq;
     
@@ -67,8 +64,6 @@ struct parList {
     float *phiAxis;
     float *rmsf, *rmsfReal, *rmsfImag;
     float K;
-
-    float *maskArray;
 };
 
 /* Structure to store useful GPU device information */
