@@ -25,7 +25,6 @@ sarrvesh.ss@gmail.com
 #include "constants.h"
 #include "fileaccess.h"
 
-#define IM_TYPE FLOAT_IMG
 #define BUNIT   "JY/BEAM"
 #define RM      "PHI"
 
@@ -150,74 +149,70 @@ void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params)
    
    /* What are the output cube sizes */
    naxis[0] = inOptions->nPhi;
-   naxis[1] = params->qAxisLen2;
-   naxis[2] = params->qAxisLen3;
+   naxis[1] = params->qAxisLen1;
+   naxis[2] = params->qAxisLen2;
    
    /* Create the header for each output image */
-   fits_create_img(params->qDirty, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
-   fits_create_img(params->uDirty, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
-   fits_create_img(params->pDirty, IM_TYPE, FITS_OUT_NAXIS, naxis, &stat);
+   fits_create_img(params->qDirty, FLOAT_IMG, FITS_OUT_NAXIS, naxis, &stat);
+   fits_create_img(params->uDirty, FLOAT_IMG, FITS_OUT_NAXIS, naxis, &stat);
+   fits_create_img(params->pDirty, FLOAT_IMG, FITS_OUT_NAXIS, naxis, &stat);
    checkFitsError(stat);
    
    /* Set the relevant keyvalues */
    fits_write_key(params->qDirty, TSTRING, "BUNIT", BUNIT, fComment, &stat);
    fits_write_key(params->uDirty, TSTRING, "BUNIT", BUNIT, fComment, &stat);
    fits_write_key(params->pDirty, TSTRING, "BUNIT", BUNIT, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CRVAL3", &params->crval3, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CRVAL3", &params->crval3, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CRVAL3", &params->crval3, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CDELT3", &params->cdelt3, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CDELT3", &params->cdelt3, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CDELT3", &params->cdelt3, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CRPIX3", &params->crpix3, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CRPIX3", &params->crpix3, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CRPIX3", &params->crpix3, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TSTRING, "CTYPE3", params->ctype3, fComment, &stat);
-   fits_write_key(params->uDirty, TSTRING, "CTYPE3", params->ctype3, fComment, &stat);
-   fits_write_key(params->pDirty, TSTRING, "CTYPE3", params->ctype3, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
-   fits_write_key(params->uDirty, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
-   fits_write_key(params->pDirty, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CRVAL1", &inOptions->phiMin, 
-                  fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CRVAL1", &inOptions->phiMin, 
-                  fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CRVAL1", &inOptions->phiMin, 
-                  fComment, &stat);
-   
-   fits_write_key(params->qDirty, TFLOAT, "CDELT1", &inOptions->dPhi, fComment, &stat);
-   fits_write_key(params->uDirty, TFLOAT, "CDELT1", &inOptions->dPhi, fComment, &stat);
-   fits_write_key(params->pDirty, TFLOAT, "CDELT1", &inOptions->dPhi, fComment, &stat);
-   
+
+   fits_write_key(params->qDirty, TDOUBLE, "CRVAL1", &inOptions->phiMin, fComment, &stat);
+   fits_write_key(params->uDirty, TDOUBLE, "CRVAL1", &inOptions->phiMin, fComment, &stat);
+   fits_write_key(params->pDirty, TDOUBLE, "CRVAL1", &inOptions->phiMin, fComment, &stat);
+
+   fits_write_key(params->qDirty, TDOUBLE, "CDELT1", &inOptions->dPhi, fComment, &stat);
+   fits_write_key(params->uDirty, TDOUBLE, "CDELT1", &inOptions->dPhi, fComment, &stat);
+   fits_write_key(params->pDirty, TDOUBLE, "CDELT1", &inOptions->dPhi, fComment, &stat);
+
    tempVar = 1;
    fits_write_key(params->qDirty, TFLOAT, "CRPIX1", &tempVar, fComment, &stat);
    fits_write_key(params->uDirty, TFLOAT, "CRPIX1", &tempVar, fComment, &stat);
    fits_write_key(params->pDirty, TFLOAT, "CRPIX1", &tempVar, fComment, &stat);
-   
+
    fits_write_key(params->qDirty, TSTRING, "CTYPE1", RM, fComment, &stat);
    fits_write_key(params->uDirty, TSTRING, "CTYPE1", RM, fComment, &stat);
    fits_write_key(params->pDirty, TSTRING, "CTYPE1", RM, fComment, &stat);
+
+   fits_write_key(params->qDirty, TFLOAT, "CRVAL2", &params->crval1, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CRVAL2", &params->crval1, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CRVAL2", &params->crval1, fComment, &stat);
+
+   fits_write_key(params->qDirty, TFLOAT, "CDELT2", &params->cdelt1, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CDELT2", &params->cdelt1, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CDELT2", &params->cdelt1, fComment, &stat);
+
+   fits_write_key(params->qDirty, TFLOAT, "CRPIX2", &params->crpix1, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CRPIX2", &params->crpix1, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CRPIX2", &params->crpix1, fComment, &stat);
+
+   fits_write_key(params->qDirty, TSTRING, "CTYPE2", params->ctype1, fComment, &stat);
+   fits_write_key(params->uDirty, TSTRING, "CTYPE2", params->ctype1, fComment, &stat);
+   fits_write_key(params->pDirty, TSTRING, "CTYPE2", params->ctype1, fComment, &stat);
+   
+   fits_write_key(params->qDirty, TFLOAT, "CRVAL3", &params->crval2, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CRVAL3", &params->crval2, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CRVAL3", &params->crval2, fComment, &stat);
+   
+   fits_write_key(params->qDirty, TFLOAT, "CDELT3", &params->cdelt2, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CDELT3", &params->cdelt2, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CDELT3", &params->cdelt2, fComment, &stat);
+   
+   fits_write_key(params->qDirty, TFLOAT, "CRPIX3", &params->crpix2, fComment, &stat);
+   fits_write_key(params->uDirty, TFLOAT, "CRPIX3", &params->crpix2, fComment, &stat);
+   fits_write_key(params->pDirty, TFLOAT, "CRPIX3", &params->crpix2, fComment, &stat);
+   
+   fits_write_key(params->qDirty, TSTRING, "CTYPE3", params->ctype2, fComment, &stat);
+   fits_write_key(params->uDirty, TSTRING, "CTYPE3", params->ctype2, fComment, &stat);
+   fits_write_key(params->pDirty, TSTRING, "CTYPE3", params->ctype2, fComment, &stat);
    
    checkFitsError(stat);
-
 }
 
 /*************************************************************

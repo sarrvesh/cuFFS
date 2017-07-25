@@ -87,6 +87,7 @@ int main(int argc, char *argv[]) {
     /* Find the best device to use */
     gpuList = getDeviceInformation(&nDevices);
     selectedDevice = getBestDevice(gpuList, nDevices);
+    printf("INFO: Selected device %d\n", selectedDevice);
     cudaSetDevice(selectedDevice);
     checkCudaError();
     /* Copy the device info for the best device */

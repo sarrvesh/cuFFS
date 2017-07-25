@@ -69,7 +69,7 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
         printf("\nError: Could not detect CUDA supported GPU(s)\n\n");
         exit(FAILURE);
     }
-    printf("\nINFO: Detected %d CUDA-supported GPU(s)\n", deviceCount);
+    printf("INFO: Detected %d CUDA-supported GPU(s)\n", deviceCount);
     *nDevices = deviceCount;
 
     /* Store useful information about each GPU in a structure array */
@@ -91,6 +91,7 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
         gpuList[dev].warpSize           = deviceProp.warpSize;
         gpuList[dev].nSM                = deviceProp.multiProcessorCount;
         /* Print device info */
+        /*** COMMENTED OUT FOR NOW. TOO MUCH INFORMATION.
         printf("\nDevice %d: %s (version: %d.%d)", dev, deviceProp.name, 
                                                         deviceProp.major, 
                                                         deviceProp.minor);
@@ -102,8 +103,9 @@ struct deviceInfoList * getDeviceInformation(int *nDevices) {
         printf("\n\tMax thread dim: (%d, %d, %d)", deviceProp.maxThreadsDim[0], 
                                                    deviceProp.maxThreadsDim[1], 
                                                    deviceProp.maxThreadsDim[2]);
+        ***/
     }
-    printf("\n");
+    //printf("\n");
     return(gpuList);
 }
 
