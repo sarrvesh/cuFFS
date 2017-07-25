@@ -78,53 +78,32 @@ int main(int argc, char *argv[]) {
     /* Parse the input file */
     printf("INFO: Parsing input file %s\n", parsetFileName);
     inOptions = parseInput(parsetFileName);
+    printOptions(inOptions, params);
     
-    /* Print parset input options to screen */
-    printOptions(inOptions);
+    /* Check input files */
+    printf("INFO: Checking input files\n");
+    checkInputFiles(&inOptions, &params);
     
     /* Retreive information about all connected GPU devices */
+    /* Find the best device to use */
     gpuList = getDeviceInformation(&nDevices);
-
-    /* Select the best device */
     selectedDevice = getBestDevice(gpuList, nDevices);
     cudaSetDevice(selectedDevice);
-    setMemMapFlag();
     checkCudaError();
-
     /* Copy the device info for the best device */
     selectedDeviceInfo = copySelectedDeviceInfo(gpuList, selectedDevice);
     free(gpuList);
     
-    /* Open the input files */
-    printf("INFO: Accessing the input files\n");
-    printf("WARN: Assuming NAXIS3 is the frequency axis\n");
-    fitsStatus = SUCCESS;
-    fits_open_file(&params.qFile, inOptions.qCubeName, READONLY, &fitsStatus);
-    fits_open_file(&params.uFile, inOptions.uCubeName, READONLY, &fitsStatus);
-    checkFitsError(fitsStatus);
-    params.freq = fopen(inOptions.freqFileName, FILE_READONLY);
-    if(params.freq == NULL) {
-        printf("Error: Unable to open the frequency file\n\n");
-        return(FAILURE);
+    /* Gather information from input fits header and setup output images */
+    if(inOptions.fileFormat) {
+       fitsStatus = getFitsHeader(&inOptions, &params);
+       checkFitsError(fitsStatus);
+       makeOutputFitsImages(&inOptions, &params);
     }
-    if(inOptions.isImageMaskDefined == TRUE) {
-        printf("INFO: Accessing the input mask %s", inOptions.imageMask);
-        fitsStatus = SUCCESS;
-        fits_open_file(&params.maskFile, inOptions.imageMask, READONLY, 
-                       &fitsStatus);
-        checkFitsError(fitsStatus);
-    }
-    
-    /* Gather information from input image fits header */
-    fitsStatus = getFitsHeader(&inOptions, &params);
-    checkFitsError(fitsStatus);
-
-    /* Create the output images */
-    makeOutputImages(&inOptions, &params);
+    else { /* Gather information from input hdf5 images */ }
     
     /* Read frequency list */
-    if(getFreqList(&inOptions, &params))
-        return(FAILURE);
+    if(getFreqList(&inOptions, &params)) { return(FAILURE); }
     
     /* Find median lambda20 */
     getMedianLambda20(&params);
@@ -134,7 +113,7 @@ int main(int argc, char *argv[]) {
     if(generateRMSF(&inOptions, &params)) {
         printf("Error: Mem alloc failed while generating RMSF\n");
         return(FAILURE);
-    }    
+    }
     /* Write RMSF to disk */
     if(writeRMSF(inOptions, params)) {
         printf("Error: Unable to write RMSF to disk\n\n");

@@ -45,6 +45,29 @@ void checkFitsError(int status) {
 
 /*************************************************************
 *
+* Check of the input files are open-able
+*
+*************************************************************/
+void checkInputFiles(struct optionsList *inOptions, struct parList *params) {
+   int fitsStatus = SUCCESS;
+   if(inOptions->fileFormat) {
+      /* Check if all the input fits files are accessible */
+      fits_open_file(&(params->qFile), inOptions->qCubeName, READONLY, &fitsStatus);
+      fits_open_file(&(params->uFile), inOptions->uCubeName, READONLY, &fitsStatus);
+      checkFitsError(fitsStatus);
+   }
+   else { /* Check if all the HDF5 files are accessible */ }
+   
+   /* Check if you can open the frequency file */
+   params->freq = fopen(inOptions->freqFileName, FILE_READONLY);
+   if(params->freq == NULL) {
+      printf("Error: Unable to open the frequency file\n\n");
+      exit(FAILURE);
+   }
+}
+
+/*************************************************************
+*
 * Read header information from the fits files
 *
 *************************************************************/
@@ -52,48 +75,53 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
     int fitsStatus = SUCCESS;
     char fitsComment[FLEN_COMMENT];
     
+    /* Remember that the input fits images are rotated. */
+    /* Frequency is the first axis */
+    /* RA is the second */
+    /* Dec is the third */
+    
     /* Get the image dimensions from the Q cube */
     fits_read_key(params->qFile, TINT, "NAXIS", &params->qAxisNum, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS1", &params->qAxisLen1, 
+    fits_read_key(params->qFile, TINT, "NAXIS1", &params->qAxisLen3, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS2", &params->qAxisLen2, 
+    fits_read_key(params->qFile, TINT, "NAXIS2", &params->qAxisLen1, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TINT, "NAXIS3", &params->qAxisLen3, 
+    fits_read_key(params->qFile, TINT, "NAXIS3", &params->qAxisLen2, 
       fitsComment, &fitsStatus);
     /* Get the image dimensions from the U cube */
     fits_read_key(params->uFile, TINT, "NAXIS", &params->uAxisNum, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS1", &params->uAxisLen1, 
+    fits_read_key(params->uFile, TINT, "NAXIS1", &params->uAxisLen3, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS2", &params->uAxisLen2, 
+    fits_read_key(params->uFile, TINT, "NAXIS2", &params->uAxisLen1, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->uFile, TINT, "NAXIS3", &params->uAxisLen3,
+    fits_read_key(params->uFile, TINT, "NAXIS3", &params->uAxisLen2,
       fitsComment, &fitsStatus);
     /* Get WCS information */
-    fits_read_key(params->qFile, TFLOAT, "CRVAL1", &params->crval1,
+    fits_read_key(params->qFile, TFLOAT, "CRVAL1", &params->crval3,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CRVAL2", &params->crval2,
+    fits_read_key(params->qFile, TFLOAT, "CRVAL2", &params->crval1,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CRVAL3", &params->crval3,
+    fits_read_key(params->qFile, TFLOAT, "CRVAL3", &params->crval2,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CRPIX1", &params->crpix1, 
+    fits_read_key(params->qFile, TFLOAT, "CRPIX1", &params->crpix3, 
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CRPIX2", &params->crpix2,
+    fits_read_key(params->qFile, TFLOAT, "CRPIX2", &params->crpix1,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CRPIX3", &params->crpix3,
+    fits_read_key(params->qFile, TFLOAT, "CRPIX3", &params->crpix2,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CDELT1", &params->cdelt1,
+    fits_read_key(params->qFile, TFLOAT, "CDELT1", &params->cdelt3,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CDELT2", &params->cdelt2,
+    fits_read_key(params->qFile, TFLOAT, "CDELT2", &params->cdelt1,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TFLOAT, "CDELT3", &params->cdelt3,
+    fits_read_key(params->qFile, TFLOAT, "CDELT3", &params->cdelt2,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TSTRING, "CTYPE1", &params->ctype1,
+    fits_read_key(params->qFile, TSTRING, "CTYPE1", &params->ctype3,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TSTRING, "CTYPE2", &params->ctype2,
+    fits_read_key(params->qFile, TSTRING, "CTYPE2", &params->ctype1,
       fitsComment, &fitsStatus);
-    fits_read_key(params->qFile, TSTRING, "CTYPE3", &params->ctype3,
+    fits_read_key(params->qFile, TSTRING, "CTYPE3", &params->ctype2,
       fitsComment, &fitsStatus);
     
     return(fitsStatus);
@@ -104,7 +132,7 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
 * Create output images
 *
 *************************************************************/
-void makeOutputImages(struct optionsList *inOptions, struct parList *params) {
+void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params) {
    int stat = SUCCESS;
    char filenamefull[FILENAME_LEN];
    long naxis[FITS_OUT_NAXIS];
@@ -201,12 +229,12 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     int i;
     float tempFloat;
     
-    params->freqList = calloc(params->qAxisLen1, sizeof(params->freqList));
+    params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
     if(params->freqList == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
-    for(i=0; i<params->qAxisLen1; i++) {
+    for(i=0; i<params->qAxisLen3; i++) {
         fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
             printf("Error: Frequency values and fits frames don't match\n");
@@ -220,13 +248,13 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     }
     
     /* Compute \lambda^2 from the list of generated frequencies */
-    params->lambda2  = calloc(params->qAxisLen1, sizeof(params->lambda2));
+    params->lambda2  = calloc(params->qAxisLen3, sizeof(params->lambda2));
     if(params->lambda2 == NULL) {
         printf("Error: Mem alloc failed while reading in frequency list\n\n");
         return(FAILURE);
     }
     params->lambda20 = 0.0;
-    for(i=0; i<params->qAxisLen1; i++)
+    for(i=0; i<params->qAxisLen3; i++)
         params->lambda2[i] = (LIGHTSPEED / params->freqList[i]) * 
                              (LIGHTSPEED / params->freqList[i]);
     

@@ -31,7 +31,8 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params);
 int getFreqList(struct optionsList *inOptions, struct parList *params);
 int getImageMask(struct optionsList *inOptions, struct parList *params);
 void checkFitsError(int status);
-void makeOutputImages(struct optionsList *inOptions, struct parList *params);
+void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params);
+void checkInputFiles(struct optionsList *inOptions, struct parList *params);
 
 /* Define the output file names here */
 #define DIRTY_P "dirtyP.fits"

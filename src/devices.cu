@@ -35,18 +35,6 @@ __global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS,
 
 /*************************************************************
 *
-* Enable host memory mapping 
-*
-*************************************************************/
-extern "C"
-void setMemMapFlag() {
-    /* Enable host memory mapping */
-    cudaSetDeviceFlags(cudaDeviceMapHost);
-    checkCudaError();
-}
-
-/*************************************************************
-*
 * Check if CUDA ERROR flag has been set. If raised, print 
 *   error message to stdout and exit.
 *
@@ -191,9 +179,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     fPixel = (long *)calloc(params->qAxisNum, sizeof(*fPixel));
     
     /* Allocate memory on the host */
-    nInElements = params->qAxisLen1 * params->qAxisLen2;
+    nInElements = params->qAxisLen2 * params->qAxisLen3;
     nOutElements= inOptions->nPhi * params->qAxisLen2;
-    lambdaDiff2 = (float *)calloc(params->qAxisLen1, sizeof(*lambdaDiff2));
+    lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(*lambdaDiff2));
     qImageArray = (float *)calloc(nInElements, sizeof(*qImageArray));
     uImageArray = (float *)calloc(nInElements, sizeof(*uImageArray));
     qPhi = (float *)calloc(nOutElements, sizeof(*qPhi));
@@ -206,7 +194,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     }
     
     /* Allocate memory on the device */
-    cudaMalloc(&d_lambdaDiff2, sizeof(*lambdaDiff2)*params->qAxisLen1);
+    cudaMalloc(&d_lambdaDiff2, sizeof(*lambdaDiff2)*params->qAxisLen3);
     cudaMalloc(&d_phiAxis, sizeof(*(params->phiAxis))*inOptions->nPhi);
     cudaMalloc(&d_qImageArray, nInElements*sizeof(*qImageArray));
     cudaMalloc(&d_uImageArray, nInElements*sizeof(*uImageArray));
@@ -216,10 +204,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     checkCudaError();
 
     /* Compute \lambda^2 - \lambda^2_0 once. Common for all threads */
-    for(i=0;i<params->qAxisLen1;i++)
+    for(i=0;i<params->qAxisLen3;i++)
         lambdaDiff2[i] = 2.0*(params->lambda2[i]-params->lambda20);
     cudaMemcpy(d_lambdaDiff2, lambdaDiff2, 
-               sizeof(*lambdaDiff2)*params->qAxisLen1, cudaMemcpyHostToDevice);
+               sizeof(*lambdaDiff2)*params->qAxisLen3, cudaMemcpyHostToDevice);
     checkCudaError();
     
     /* Allocate and transfer phi axis info. Common for all threads */
@@ -238,11 +226,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     /* Process each line of sight individually */
     //cudaEventRecord(totStart);
     fPixel[0] = 1; fPixel[1] = 1;
-    for(j=1; j<=params->qAxisLen3; j++) {
-       fPixel[2] = j;
-       /* Read one frame at a time. In the rotated cube, this is 
+    for(j=1; j<=params->qAxisLen1; j++) {
+       /* Read one frame at a time. In the original cube, this is 
           all sightlines in one DEC row */
        //cudaEventRecord(readStart);
+       fPixel[2] = j;
        fits_read_pix(params->qFile, TFLOAT, fPixel, nInElements, NULL, 
                      qImageArray, NULL, &fitsStatus);
        fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
@@ -259,7 +247,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
  
        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
        computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
-                         params->qAxisLen2, params->qAxisLen1, params->K, d_qPhi,
+                         params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */

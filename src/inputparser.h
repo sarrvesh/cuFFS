@@ -28,6 +28,6 @@ extern "C"
 #endif
 
 struct optionsList parseInput(char *parsetFileName);
-void printOptions(struct optionsList inOptions);
+void printOptions(struct optionsList inOptions, struct parList params);
 
 #endif

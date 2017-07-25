@@ -27,6 +27,9 @@ sarrvesh.ss@gmail.com
 
 #include "inputparser.h"
 
+#define FITS_STR "FITS"
+#define HDF5_STR "HDF5"
+
 /*************************************************************
 *
 * Parse the input file and extract the relevant keywords
@@ -36,6 +39,7 @@ struct optionsList parseInput(char *parsetFileName) {
     config_t cfg;
     struct optionsList inOptions;
     const char *str;
+    char *tempStr;
     
     /* Initialize configuration */
     config_init(&cfg);
@@ -50,25 +54,28 @@ struct optionsList parseInput(char *parsetFileName) {
     
     /* Get the input file format */
     if(config_lookup_string(&cfg, "fileFormat", &str)) {
-        inOptions.fileFormat = malloc(strlen(str)+1);
-        strcpy(inOptions.qCubeName, str);
+        tempStr = malloc(strlen(str)+1);
+        strcpy(tempStr, str);
     }
     else {
         printf("Error: 'fileFormat' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
-    if((!(strcasecmp(inOptions.fileFormat, FITS)) || 
-          strcasecmp(inOptions.fileFormat, HDF5))) {
+    if((!(strcasecmp(tempStr, FITS_STR)) ||
+          strcasecmp(tempStr, HDF5_STR))) {
         printf("Error: 'fileFormat' has to be FITS or HDF5\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
-    }
-    if(strcasecmp(inOptions.fileFormat, HDF5)) {
+    } // Note strcasecmp is not standard C
+    else if(strcasecmp(tempStr, HDF5_STR)) {
+        inOptions.fileFormat = HDF5;
         printf("ERROR: HDF5 is not supported in this version\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
+    else { inOptions.fileFormat = FITS; }
+    free(tempStr);
     
     /* Get the names of fits files */
     if(config_lookup_string(&cfg, "qCubeName", &str)) {
@@ -130,15 +137,26 @@ struct optionsList parseInput(char *parsetFileName) {
         config_destroy(&cfg);
         exit(FAILURE);
     }
+    /* Get number of output phi planes */
     if(! config_lookup_float(&cfg, "dPhi", &inOptions.dPhi)) {
         printf("Error: 'dPhi' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     }
+    if(inOptions.dPhi <= ZERO) {
+       printf("Error: dPhi cannot be less than 0\n\n");
+       config_destroy(&cfg);
+       exit(FAILURE);
+    }
     if(! config_lookup_int(&cfg, "nPhi", &inOptions.nPhi)) {
         printf("Error: 'nPhi' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
+    }
+    if(inOptions.nPhi <= ZERO) {
+       printf("Error: nPhi cannot be less than 0\n\n");
+       config_destroy(&cfg);
+       exit(FAILURE);
     }
     if(! config_lookup_bool(&cfg, "plotRMSF", &inOptions.plotRMSF)) {
         printf("INFO: 'plotRMSF' undefined in parset\n");
@@ -158,7 +176,7 @@ struct optionsList parseInput(char *parsetFileName) {
 * Print parsed input to screen
 *
 *************************************************************/
-void printOptions(struct optionsList inOptions) {
+void printOptions(struct optionsList inOptions, struct parList params) {
     int i;
     
     printf("\n");
@@ -174,6 +192,12 @@ void printOptions(struct optionsList inOptions) {
     printf("# of phi planes: %d\n", inOptions.nPhi);
     printf("delta phi: %.2lf\n", inOptions.dPhi);
     printf("\n");
+    printf("Input dimension: %d x %d x %d\n", params.qAxisLen1,
+                                              params.qAxisLen2,
+                                              params.qAxisLen3);
+    printf("Output dimension: %d x %d x %d\n", params.qAxisLen1,
+                                               params.qAxisLen2,
+                                               inOptions.nPhi);
     for(i=0; i<SCREEN_WIDTH; i++) { printf("#"); }
     printf("\n");
 }

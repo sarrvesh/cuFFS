@@ -29,7 +29,6 @@ extern "C"
 
 /* Structure to store the input options */
 struct optionsList {
-    char *fileFormat;
     char *qCubeName;
     char *uCubeName;
     char *freqFileName;
@@ -42,6 +41,7 @@ struct optionsList {
     int nPhi;
     
     int nGPU;
+    int fileFormat;
 };
 
 /* Structure to store all information related to RM Synthesis */

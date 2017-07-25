@@ -34,7 +34,6 @@ int getBestDevice(struct deviceInfoList *gpuList, int nDevices);
 struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,  
                                              int selectedDevice);
 void checkCudaError(void);
-void setMemMapFlag(void);
 void getGpuAllocForP(int *blockSize, int *threadSize, long *nFrames, 
                      int nImRows, int nRowElements, 
                      struct deviceInfoList selectedDeviceInfo);

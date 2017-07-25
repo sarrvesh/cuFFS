@@ -15,6 +15,7 @@ NVCC_FLAGS=arch=compute_60,code=sm_60
 printf "Searching for gnuplot: "
 if ! gnuplot_loc="$(type -p gnuplot)" || [ -z "$gnuplot_loc" ]; then
     printf "not found\n"
+    MACRO=""
 else
     printf "found\n"
     MACRO="-DGNUPLOT_ENABLE"
@@ -34,6 +35,6 @@ printf "Compiling rmsf.c\n"
 gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rmsf.c
 
 printf "Compiling rmsynthesis.c\n"
-gcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c
+gcc -O3 -DMACRO -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c
 
 nvcc -O3 -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -gencode $NVCC_FLAGS
