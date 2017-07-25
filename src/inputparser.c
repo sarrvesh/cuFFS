@@ -62,13 +62,13 @@ struct optionsList parseInput(char *parsetFileName) {
         config_destroy(&cfg);
         exit(FAILURE);
     }
-    if((!(strcasecmp(tempStr, FITS_STR)) ||
-          strcasecmp(tempStr, HDF5_STR))) {
+    if(((strcasecmp(tempStr, FITS_STR)!=SUCCESS) &&
+         strcasecmp(tempStr, HDF5_STR)!=SUCCESS)) {
         printf("Error: 'fileFormat' has to be FITS or HDF5\n\n");
         config_destroy(&cfg);
         exit(FAILURE);
     } // Note strcasecmp is not standard C
-    else if(strcasecmp(tempStr, HDF5_STR)) {
+    if(strcasecmp(tempStr, HDF5_STR)==SUCCESS) {
         inOptions.fileFormat = HDF5;
         printf("ERROR: HDF5 is not supported in this version\n\n");
         config_destroy(&cfg);

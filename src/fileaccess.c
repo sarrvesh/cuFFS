@@ -50,7 +50,7 @@ void checkFitsError(int status) {
 *************************************************************/
 void checkInputFiles(struct optionsList *inOptions, struct parList *params) {
    int fitsStatus = SUCCESS;
-   if(inOptions->fileFormat) {
+   if(inOptions->fileFormat == FITS) {
       /* Check if all the input fits files are accessible */
       fits_open_file(&(params->qFile), inOptions->qCubeName, READONLY, &fitsStatus);
       fits_open_file(&(params->uFile), inOptions->uCubeName, READONLY, &fitsStatus);

@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
     /* Parse the input file */
     printf("INFO: Parsing input file %s\n", parsetFileName);
     inOptions = parseInput(parsetFileName);
-    printOptions(inOptions, params);
     
     /* Check input files */
     printf("INFO: Checking input files\n");
@@ -95,12 +94,15 @@ int main(int argc, char *argv[]) {
     free(gpuList);
     
     /* Gather information from input fits header and setup output images */
-    if(inOptions.fileFormat) {
+    if(inOptions.fileFormat == FITS) {
        fitsStatus = getFitsHeader(&inOptions, &params);
        checkFitsError(fitsStatus);
        makeOutputFitsImages(&inOptions, &params);
     }
     else { /* Gather information from input hdf5 images */ }
+
+    /* Print some useful information */
+    printOptions(inOptions, params);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params)) { return(FAILURE); }

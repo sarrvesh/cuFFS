@@ -1,4 +1,4 @@
-ootdir of libconfig
+# Rootdir of libconfig
 LIB_CONFIG_PATH="/home/see041/libconfig"
 # Rootdir of cfitsio
 CFITSIO_PATH="/apps/cfitsio/3.39"
