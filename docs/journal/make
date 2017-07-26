@@ -1,6 +1,0 @@
-pdflatex rmsynthesis.tex
-
-bibtex rmsynthesis.aux
-
-pdflatex rmsynthesis.tex
-pdflatex rmsynthesis.tex
