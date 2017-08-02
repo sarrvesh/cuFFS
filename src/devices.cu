@@ -27,9 +27,13 @@ extern "C" {
 #include "constants.h"
 #include "devices.h"
 #include "fileaccess.h"
-__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS, 
+__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int nLOS, 
                            int nChan, float K, float *d_qPhi, float *d_uPhi, 
                            float *d_pPhi, float *d_phiAxis, int nPhi, 
+                           float *d_lambdaDiff2);
+__global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int nLOS,
+                           int nChan, float K, float *d_qPhi, float *d_uPhi,
+                           float *d_pPhi, float *d_phiAxis, int nPhi,
                            float *d_lambdaDiff2);
 }
 
@@ -165,7 +169,7 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    int i, j, k; 
+    int i, j; 
     float *lambdaDiff2, *d_lambdaDiff2;
     float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
@@ -275,10 +279,10 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                                     NULL, count, NULL);
              h5ErrorQ = H5Dread(qDataset, H5T_NATIVE_FLOAT, qMemspace, 
                                    qDataspace, H5P_DEFAULT, 
-                                   &(qImageArray[k*params->qAxisLen3]));
+                                   qImageArray);
              h5ErrorU = H5Dread(uDataset, H5T_NATIVE_FLOAT, uMemspace, 
                                    uDataspace, H5P_DEFAULT, 
-                                   &(uImageArray[k*params->qAxisLen3]));
+                                   uImageArray);
              if(h5ErrorQ < 0 || h5ErrorU < 0 || qerror<0 || uerror<0 ) {
                 printf("\nError: Unable to read input data cubes\n\n");
                 exit(FAILURE);
@@ -306,6 +310,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                          params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
           break;
+       }
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */
        cudaMemcpy(d_qPhi, qPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
@@ -341,6 +346,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        H5Sclose(qMemspace);  H5Sclose(uMemspace);
        H5Sclose(qDataspace); H5Sclose(uDataspace);
        H5Dclose(qDataset);   H5Dclose(uDataset);
+       H5Fclose(params->qDirtyH5);
+       H5Fclose(params->uDirtyH5);
+       H5Fclose(params->pDirtyH5);
        break;
     }
 

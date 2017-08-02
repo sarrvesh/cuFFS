@@ -196,11 +196,11 @@ void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params)
    float tempVar;
 
    /* Create the output Q, U, and P images */
-   sprintf(filenamefull, "%s%s", inOptions->outPrefix, Q_DIRTY);
+   sprintf(filenamefull, "%s%s.fits", inOptions->outPrefix, Q_DIRTY);
    fits_create_file(&params->qDirty, filenamefull, &stat);
-   sprintf(filenamefull, "%s%s", inOptions->outPrefix, U_DIRTY);
+   sprintf(filenamefull, "%s%s.fits", inOptions->outPrefix, U_DIRTY);
    fits_create_file(&params->uDirty, filenamefull, &stat);
-   sprintf(filenamefull, "%s%s", inOptions->outPrefix, P_DIRTY);
+   sprintf(filenamefull, "%s%s.fits", inOptions->outPrefix, P_DIRTY);
    fits_create_file(&params->pDirty, filenamefull, &stat);
    checkFitsError(stat);
    
@@ -278,7 +278,64 @@ void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params)
 *
 *************************************************************/
 void makeOutputHDF5Images(struct optionsList *inOptions, struct parList *params) {
+   char filenamefull[FILENAME_LEN];
+   float tempVar = 1;
 
+   /* Create the output Q, U, and P images */
+   sprintf(filenamefull, "%s%s.h5", inOptions->outPrefix, Q_DIRTY);
+   params->qDirtyH5 = H5Fcreate(filenamefull, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
+   sprintf(filenamefull, "%s%s.h5", inOptions->outPrefix, U_DIRTY);
+   params->uDirtyH5 = H5Fcreate(filenamefull, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
+   sprintf(filenamefull, "%s%s.h5", inOptions->outPrefix, P_DIRTY);
+   params->pDirtyH5 = H5Fcreate(filenamefull, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
+
+   /* Create attributes for the / group */
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CRVAL1", &(params->crval1), sizeof(params->crval1));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CRVAL2", &(params->crval2), sizeof(params->crval2));
+   H5LTset_attribute_double(params->qDirtyH5, ROOT, "CRVAL3", &(inOptions->phiMin), sizeof(inOptions->phiMin));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CRPIX1", &(params->crpix1), sizeof(params->crpix1));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CRPIX2", &(params->crpix2), sizeof(params->crpix2));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CRPIX3", &tempVar, sizeof(tempVar));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CDELT1", &(params->cdelt1), sizeof(params->cdelt1));
+   H5LTset_attribute_float(params->qDirtyH5, ROOT, "CDELT2", &(params->cdelt2), sizeof(params->cdelt2));
+   H5LTset_attribute_double(params->qDirtyH5, ROOT, "CDELT3", &(inOptions->dPhi), sizeof(inOptions->dPhi));
+   H5LTset_attribute_string(params->qDirtyH5, ROOT, "CTYPE1", params->ctype1);
+   H5LTset_attribute_string(params->qDirtyH5, ROOT, "CTYPE2", params->ctype2);
+   H5LTset_attribute_string(params->qDirtyH5, ROOT, "CTYPE3", RM);
+
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CRVAL1", &(params->crval1), sizeof(params->crval1));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CRVAL2", &(params->crval2), sizeof(params->crval2));
+   H5LTset_attribute_double(params->uDirtyH5, ROOT, "CRVAL3", &(inOptions->phiMin), sizeof(inOptions->phiMin));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CRPIX1", &(params->crpix1), sizeof(params->crpix1));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CRPIX2", &(params->crpix2), sizeof(params->crpix2));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CRPIX3", &tempVar, sizeof(tempVar));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CDELT1", &(params->cdelt1), sizeof(params->cdelt1));
+   H5LTset_attribute_float(params->uDirtyH5, ROOT, "CDELT2", &(params->cdelt2), sizeof(params->cdelt2));
+   H5LTset_attribute_double(params->uDirtyH5, ROOT, "CDELT3", &(inOptions->dPhi), sizeof(inOptions->dPhi));
+   H5LTset_attribute_string(params->uDirtyH5, ROOT, "CTYPE1", params->ctype1);
+   H5LTset_attribute_string(params->uDirtyH5, ROOT, "CTYPE2", params->ctype2);
+   H5LTset_attribute_string(params->uDirtyH5, ROOT, "CTYPE3", RM);
+
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CRVAL1", &(params->crval1), sizeof(params->crval1));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CRVAL2", &(params->crval2), sizeof(params->crval2));
+   H5LTset_attribute_double(params->pDirtyH5, ROOT, "CRVAL3", &(inOptions->phiMin), sizeof(inOptions->phiMin));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CRPIX1", &(params->crpix1), sizeof(params->crpix1));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CRPIX2", &(params->crpix2), sizeof(params->crpix2));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CRPIX3", &tempVar, sizeof(tempVar));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CDELT1", &(params->cdelt1), sizeof(params->cdelt1));
+   H5LTset_attribute_float(params->pDirtyH5, ROOT, "CDELT2", &(params->cdelt2), sizeof(params->cdelt2));
+   H5LTset_attribute_double(params->pDirtyH5, ROOT, "CDELT3", &(inOptions->dPhi), sizeof(inOptions->dPhi));
+   H5LTset_attribute_string(params->pDirtyH5, ROOT, "CTYPE1", params->ctype1);
+   H5LTset_attribute_string(params->pDirtyH5, ROOT, "CTYPE2", params->ctype2);
+   H5LTset_attribute_string(params->pDirtyH5, ROOT, "CTYPE3", RM);
+
+   /* CLASS attribute of ROOT should be set to HDFITS */
+   H5LTset_attribute_string(params->qDirtyH5, ROOT, "CLASS", HDFITS);
+   H5LTset_attribute_string(params->uDirtyH5, ROOT, "CLASS", HDFITS);
+   H5LTset_attribute_string(params->pDirtyH5, ROOT, "CLASS", HDFITS);
+
+   /* Create the /PRIMARY/DATA dataset */ 
+   
 }
 
 /*************************************************************

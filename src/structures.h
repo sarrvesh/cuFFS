@@ -49,6 +49,7 @@ struct parList {
     fitsfile *qDirty, *uDirty, *pDirty;
 
     hid_t qFileh5, uFileh5;
+    hid_t qDirtyH5, uDirtyH5, pDirtyH5;
 
     FILE *freq;
     

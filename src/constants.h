@@ -45,9 +45,9 @@ extern "C"
 #define FILENAME_LEN        256
 #define STRING_BUF_LEN      256
 #define DEFAULT_OUT_PREFIX  "output_"
-#define Q_DIRTY             "q.phi.dirty.fits"
-#define U_DIRTY             "u.phi.dirty.fits"
-#define P_DIRTY             "p.phi.dirty.fits"
+#define Q_DIRTY             "q.phi.dirty"
+#define U_DIRTY             "u.phi.dirty"
+#define P_DIRTY             "p.phi.dirty"
 #define SCREEN_WIDTH        40
 #define FILE_READONLY       "r"
 #define FILE_READWRITE      "w"
@@ -71,5 +71,6 @@ extern "C"
 #define CLASS "CLASS"
 #define PRIMARY "/PRIMARY"
 #define PRIMARYDATA "/PRIMARY/DATA"
+#define HDFITS "HDFITS"
 
 #endif
