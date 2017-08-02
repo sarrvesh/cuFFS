@@ -67,4 +67,9 @@ extern "C"
 #define FITS 0
 #define HDF5 1
 
+#define ROOT "/"
+#define CLASS "CLASS"
+#define PRIMARY "/PRIMARY"
+#define PRIMARYDATA "/PRIMARY/DATA"
+
 #endif

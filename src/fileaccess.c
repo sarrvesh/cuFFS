@@ -24,6 +24,8 @@ sarrvesh.ss@gmail.com
 #include "structures.h"
 #include "constants.h"
 #include "fileaccess.h"
+#include "hdf5.h"
+#include "hdf5_hl.h"
 
 #define BUNIT   "JY/BEAM"
 #define RM      "PHI"
@@ -49,13 +51,27 @@ void checkFitsError(int status) {
 *************************************************************/
 void checkInputFiles(struct optionsList *inOptions, struct parList *params) {
    int fitsStatus = SUCCESS;
+   herr_t error;
+   char buf[STRING_BUF_LEN];
+   
    if(inOptions->fileFormat == FITS) {
       /* Check if all the input fits files are accessible */
       fits_open_file(&(params->qFile), inOptions->qCubeName, READONLY, &fitsStatus);
       fits_open_file(&(params->uFile), inOptions->uCubeName, READONLY, &fitsStatus);
       checkFitsError(fitsStatus);
    }
-   else { /* Check if all the HDF5 files are accessible */ }
+   else if(inOptions->fileFormat == HDF5) { 
+      /* Open HDF5 files */
+      params->qFileh5 = H5Fopen(inOptions->qCubeName, H5F_ACC_RDONLY, H5P_DEFAULT);
+      params->uFileh5 = H5Fopen(inOptions->uCubeName, H5F_ACC_RDONLY, H5P_DEFAULT);
+      if(params->qFileh5 < 0 || params->uFileh5 < 0) {
+         printf("Error: Unable to open the input HDF5 files\n\n");
+         exit(FAILURE);
+      }
+      /* Check if the hdf5 files are compatible with HDFITS format */
+      error = H5LTget_attribute_string(params->qFileh5, "/", "CLASS", buf);
+   }
+   else {}
    
    /* Check if you can open the frequency file */
    params->freq = fopen(inOptions->freqFileName, FILE_READONLY);
@@ -128,7 +144,48 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
 
 /*************************************************************
 *
-* Create output images
+* Read header information from the HDF5 files
+*
+*************************************************************/
+int getHDF5Header(struct optionsList *inOptions, struct parList *params) {
+    hsize_t tempArr[N_DIMS];
+    herr_t error;
+    
+    /* Remember that the input fits images are NOT rotated. */
+    /* RA is the first axis */
+    /* Dec is the second */
+    /* Frequency is the third */
+    
+    /* Get the dimensionality of the input datasets */
+    error = H5LTget_dataset_ndims(params->qFileh5, PRIMARYDATA, &(params->qAxisNum));
+    error = H5LTget_dataset_ndims(params->uFileh5, PRIMARYDATA, &(params->uAxisNum));
+    /* Get the sizes of each dimension */
+    error = H5LTget_dataset_info(params->qFileh5, PRIMARYDATA, tempArr, NULL, NULL);
+    params->qAxisLen1 = tempArr[0];
+    params->qAxisLen2 = tempArr[1];
+    params->qAxisLen3 = tempArr[2];
+    error = H5LTget_dataset_info(params->uFileh5, PRIMARYDATA, tempArr, NULL, NULL);
+    params->uAxisLen1 = tempArr[0];
+    params->uAxisLen2 = tempArr[1];
+    params->uAxisLen3 = tempArr[2];
+    /* Get WCS information */
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRVAL1", &params->crval1);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRVAL2", &params->crval2);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRVAL3", &params->crval3);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CDELT1", &params->cdelt1);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CDELT2", &params->cdelt2);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CDELT3", &params->cdelt3);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRPIX1", &params->crpix1);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRPIX2", &params->crpix2);
+    H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRPIX3", &params->crpix3);
+    H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE1", params->ctype1);
+    H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE2", params->ctype2);
+    H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE3", params->ctype3);
+}
+
+/*************************************************************
+*
+* Create output FITS images
 *
 *************************************************************/
 void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params) {
@@ -213,6 +270,15 @@ void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params)
    fits_write_key(params->pDirty, TSTRING, "CTYPE3", params->ctype2, fComment, &stat);
    
    checkFitsError(stat);
+}
+
+/*************************************************************
+*
+* Create output HDF5 cubes
+*
+*************************************************************/
+void makeOutputHDF5Images(struct optionsList *inOptions, struct parList *params) {
+
 }
 
 /*************************************************************

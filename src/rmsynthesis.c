@@ -100,10 +100,14 @@ int main(int argc, char *argv[]) {
        checkFitsError(fitsStatus);
        makeOutputFitsImages(&inOptions, &params);
     }
-    else { /* Gather information from input hdf5 images */ }
+    else { 
+       getHDF5Header(&inOptions, &params);
+       makeOutputHDF5Images(&inOptions, &params);
+    }
 
     /* Print some useful information */
     printOptions(inOptions, params);
+    exit(0);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params)) { return(FAILURE); }

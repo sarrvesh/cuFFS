@@ -32,6 +32,8 @@ int getFreqList(struct optionsList *inOptions, struct parList *params);
 void checkFitsError(int status);
 void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params);
 void checkInputFiles(struct optionsList *inOptions, struct parList *params);
+int getHDF5Header(struct optionsList *inOptions, struct parList *params);
+void makeOutputHDF5Images(struct optionsList *inOptions, struct parList *params);
 
 /* Define the output file names here */
 #define DIRTY_P "dirtyP.fits"

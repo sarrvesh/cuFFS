@@ -21,6 +21,7 @@ sarrvesh.ss@gmail.com
 
 ******************************************************************************/
 #include "fitsio.h"
+#include "hdf5.h"
 #include "constants.h"
 
 #ifdef __cplusplus
@@ -46,6 +47,9 @@ struct optionsList {
 struct parList {
     fitsfile *qFile, *uFile;
     fitsfile *qDirty, *uDirty, *pDirty;
+
+    hid_t qFileh5, uFileh5;
+
     FILE *freq;
     
     int qAxisNum, uAxisNum;

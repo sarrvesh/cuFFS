@@ -4,6 +4,8 @@ LIB_CONFIG_PATH="/media/sarrvesh/Work/INSTALLATIONS/libconfig"
 CFITSIO_PATH="/media/sarrvesh/Work/INSTALLATIONS/cfitsio"
 #Rootdir of CUDA Toolkit
 CUDA_PATH="/media/sarrvesh/Work/INSTALLATIONS/cuda-8.0.61"
+#Rootdir of HDF5
+HDF5_PATH="/media/sarrvesh/Work/INSTALLATIONS/hdf5"
 # NVCC flags
 NVCC_FLAGS=arch=compute_60,code=sm_60
 
@@ -23,18 +25,18 @@ else
 fi
 
 printf "Compiling devices.cu\n"
-nvcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/devices.cu -gencode $NVCC_FLAGS
+nvcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -c src/devices.cu -lhdf5 -gencode $NVCC_FLAGS
 
 printf "Compiling fileaccess.c\n"
-gcc -O3 -Wno-unused-result -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/fileaccess.c
+gcc -O3 -Wno-unused-result -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -L${HDF5_PATH}/lib/ -c src/fileaccess.c -lhdf5 -lhdf5_hl
 
 printf "Compiling inputparser.c\n"
-gcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/inputparser.c
+gcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -I${HDF5_PATH}/include/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/inputparser.c
 
 printf "Compiling rmsf.c\n"
-gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rmsf.c
+gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -I${HDF5_PATH}/include/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/rmsf.c
 
 printf "Compiling rmsynthesis.c\n"
-gcc -O3 -DMACRO -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -c src/rmsynthesis.c
+gcc -O3 -DMACRO -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/rmsynthesis.c
 
-nvcc -O3 -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -gencode $NVCC_FLAGS
+nvcc -O3 -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -L${HDF5_PATH}/lib/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -lhdf5 -lhdf5_hl -gencode $NVCC_FLAGS
