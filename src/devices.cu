@@ -295,9 +295,17 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   cudaMemcpyHostToDevice);
  
        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
-       computeQUP<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
+       switch(inOptions->fileFormat) {
+       case FITS:
+          computeQUP_fits<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
                          params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
+          break;
+       case HDF5:
+          computeQUP_hdf5<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray,
+                         params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
+                         d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
+          break;
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */
        cudaMemcpy(d_qPhi, qPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
@@ -311,12 +319,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              fits_write_pix(params->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
              fits_write_pix(params->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
              checkFitsError(fitsStatus);
-             free(fPixel);
              break;
           case HDF5:
-             /*H5Sclose(qMemspace);  H5Sclose(uMemspace);
-             H5Sclose(qDataspace); H5Sclose(uDataspace);
-             H5Dclose(qDataset);   H5Dclose(uDataset);*/
+             /* Write HDF5 file to disk */
              break;
        }
     }
@@ -328,8 +333,59 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaFreeHost(d_qPhi); cudaFreeHost(d_uPhi); cudaFreeHost(d_pPhi);
     free(lambdaDiff2); cudaFree(d_lambdaDiff2);
     cudaFree(d_phiAxis);
+    switch(inOptions->fileFormat) {
+    case FITS:
+       free(fPixel);
+       break;
+    case HDF5:
+       H5Sclose(qMemspace);  H5Sclose(uMemspace);
+       H5Sclose(qDataspace); H5Sclose(uDataspace);
+       H5Dclose(qDataset);   H5Dclose(uDataset);
+       break;
+    }
 
     return(SUCCESS);
+}
+
+/*************************************************************
+*
+* Device code to compute Q(\phi) for HDF5 mode
+* THIS KERNEL NEEDS TO BE REWRITEEN
+* Q/UIMAGEARRAY IS IN DIFFERENT ORDER FOR FITS AND HDF5
+*
+*************************************************************/
+extern "C"
+__global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int nLOS,
+                           int nChan, float K, float *d_qPhi, float *d_uPhi,
+                           float *d_pPhi, float *d_phiAxis, int nPhi,
+                           float *d_lambdaDiff2) {
+    int i;
+    float myphi;
+    /* xIndex tells me what my phi is */
+    const int xIndex = blockIdx.x*blockDim.x + threadIdx.x;
+    /* yIndex tells me which LOS I am */
+    const int yIndex = blockIdx.y*nPhi;
+    float qPhi, uPhi, pPhi;
+    float sinVal, cosVal;
+
+    if(xIndex < nPhi) {
+        myphi = d_phiAxis[xIndex];
+        /* qPhi and uPhi are accumulators. So initialize to 0 */
+        qPhi = 0.0; uPhi = 0.0;
+        for(i=0; i<nChan; i++) {
+            sinVal = sinf(myphi*d_lambdaDiff2[yIndex+i]);
+            cosVal = cosf(myphi*d_lambdaDiff2[yIndex+i]);
+            qPhi += d_qImageArray[yIndex+i]*cosVal +
+                    d_uImageArray[yIndex+i]*sinVal;
+            uPhi += d_uImageArray[yIndex+i]*cosVal -
+                    d_qImageArray[yIndex+i]*sinVal;
+        }
+        pPhi = sqrt(qPhi*qPhi + uPhi*uPhi);
+
+        d_qPhi[xIndex] = K*qPhi;
+        d_uPhi[xIndex] = K*uPhi;
+        d_pPhi[xIndex] = K*pPhi;
+    }
 }
 
 /*************************************************************
@@ -338,7 +394,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 *
 *************************************************************/
 extern "C"
-__global__ void computeQUP(float *d_qImageArray, float *d_uImageArray, int nLOS, 
+__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int nLOS, 
                            int nChan, float K, float *d_qPhi, float *d_uPhi, 
                            float *d_pPhi, float *d_phiAxis, int nPhi, 
                            float *d_lambdaDiff2) {
