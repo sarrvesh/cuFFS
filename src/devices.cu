@@ -165,7 +165,7 @@ struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,
 extern "C"
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   struct deviceInfoList selectedDeviceInfo) {
-    int i, j; 
+    int i, j, k; 
     float *lambdaDiff2, *d_lambdaDiff2;
     float *qImageArray, *uImageArray;
     float *d_qImageArray, *d_uImageArray;
@@ -176,9 +176,36 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     long *fPixel;
     int fitsStatus = 0;
     long nInElements, nOutElements;
+    hid_t qDataspace, uDataspace;
+    hid_t qDataset, uDataset;
+    hid_t qMemspace, uMemspace;
+    herr_t h5ErrorQ, h5ErrorU;
+    herr_t qerror, uerror;
+    hsize_t offset[N_DIMS], count[N_DIMS], dimsm;
     
     /* Set some pixel access limits */
-    fPixel = (long *)calloc(params->qAxisNum, sizeof(*fPixel));
+    switch(inOptions->fileFormat) {
+       case FITS:
+          /* For FITS, set some pixel access limits */
+          fPixel = (long *)calloc(params->qAxisNum, sizeof(*fPixel));
+          fPixel[0] = 1; fPixel[1] = 1;
+          break;
+       case HDF5:
+          /* For HDF5, set up the hyperslab and data subset */
+          dimsm = params->qAxisLen2 * params->qAxisLen3;
+          qDataset   = H5Dopen2(params->qFileh5, PRIMARYDATA, H5P_DEFAULT);
+          qDataspace = H5Dget_space(qDataset);
+          uDataset   = H5Dopen2(params->uFileh5, PRIMARYDATA, H5P_DEFAULT);
+          uDataspace = H5Dget_space(uDataset);
+          count[0] = params->qAxisLen3;
+          count[1] = 1; count[2] = params->qAxisLen2;
+          offset[0] = 0; offset[1] = 0; offset[2] = 0;
+          qMemspace = H5Screate_simple(1, &dimsm, NULL);
+          uMemspace = H5Screate_simple(1, &dimsm, NULL);
+          if( qDataset<0 || uDataset<0 || qDataspace<0 || uDataspace<0 || qMemspace<0 || uMemspace<0 )
+          { printf("\nError: HDF5 allocation failed\n"); }
+          break;
+    }
     
     /* Allocate memory on the host */
     nInElements = params->qAxisLen2 * params->qAxisLen3;
@@ -219,7 +246,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     checkCudaError();
 
     /* Determine what the appropriate block and grid sizes are */
-    calcThreadSize.x = selectedDeviceInfo.warpSize;
+    calcThreadSize.x = selectedDeviceInfo.warpSize*2;
     calcBlockSize.y  = params->qAxisLen2;
     calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
     printf("INFO: Launching %dx%d blocks each with %d threads\n", 
@@ -227,18 +254,38 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Process each line of sight individually */
     //cudaEventRecord(totStart);
-    fPixel[0] = 1; fPixel[1] = 1;
     for(j=1; j<=params->qAxisLen1; j++) {
        /* Read one frame at a time. In the original cube, this is 
           all sightlines in one DEC row */
        //cudaEventRecord(readStart);
-       fPixel[2] = j;
-       fits_read_pix(params->qFile, TFLOAT, fPixel, nInElements, NULL, 
-                     qImageArray, NULL, &fitsStatus);
-       fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
-                     uImageArray, NULL, &fitsStatus);
-       checkFitsError(fitsStatus);
-        
+       switch(inOptions->fileFormat) {
+          case FITS:
+             fPixel[2] = j;
+             fits_read_pix(params->qFile, TFLOAT, fPixel, nInElements, NULL, 
+                           qImageArray, NULL, &fitsStatus);
+             fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
+                           uImageArray, NULL, &fitsStatus);
+             checkFitsError(fitsStatus);
+             break;
+          case HDF5:
+             offset[1] = j-1;
+             qerror = H5Sselect_hyperslab(qDataspace, H5S_SELECT_SET, offset, 
+                                    NULL, count, NULL);
+             uerror = H5Sselect_hyperslab(uDataspace, H5S_SELECT_SET, offset, 
+                                    NULL, count, NULL);
+             h5ErrorQ = H5Dread(qDataset, H5T_NATIVE_FLOAT, qMemspace, 
+                                   qDataspace, H5P_DEFAULT, 
+                                   &(qImageArray[k*params->qAxisLen3]));
+             h5ErrorU = H5Dread(uDataset, H5T_NATIVE_FLOAT, uMemspace, 
+                                   uDataspace, H5P_DEFAULT, 
+                                   &(uImageArray[k*params->qAxisLen3]));
+             if(h5ErrorQ < 0 || h5ErrorU < 0 || qerror<0 || uerror<0 ) {
+                printf("\nError: Unable to read input data cubes\n\n");
+                exit(FAILURE);
+             }
+             break;
+       }
+
        /* Transfer input images to device */
        cudaMemcpy(d_qImageArray, qImageArray, 
                   nInElements*sizeof(*qImageArray),
@@ -258,12 +305,22 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        cudaMemcpy(d_pPhi, pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
 
        /* Write the output cubes to disk */
-       fits_write_pix(params->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
-       fits_write_pix(params->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
-       fits_write_pix(params->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
-       checkFitsError(fitsStatus);
+       switch(inOptions->fileFormat) {
+          case FITS:
+             fits_write_pix(params->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
+             fits_write_pix(params->uDirty, TFLOAT, fPixel, nOutElements, uPhi, &fitsStatus);
+             fits_write_pix(params->pDirty, TFLOAT, fPixel, nOutElements, pPhi, &fitsStatus);
+             checkFitsError(fitsStatus);
+             free(fPixel);
+             break;
+          case HDF5:
+             /*H5Sclose(qMemspace);  H5Sclose(uMemspace);
+             H5Sclose(qDataspace); H5Sclose(uDataspace);
+             H5Dclose(qDataset);   H5Dclose(uDataset);*/
+             break;
+       }
     }
-    
+
     /* Free all the allocated memory */
     free(qImageArray); free(uImageArray);
     cudaFree(d_qImageArray); cudaFree(d_uImageArray);
@@ -271,8 +328,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     cudaFreeHost(d_qPhi); cudaFreeHost(d_uPhi); cudaFreeHost(d_pPhi);
     free(lambdaDiff2); cudaFree(d_lambdaDiff2);
     cudaFree(d_phiAxis);
-    free(fPixel);
-    
+
     return(SUCCESS);
 }
 

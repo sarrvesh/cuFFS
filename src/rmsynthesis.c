@@ -95,19 +95,20 @@ int main(int argc, char *argv[]) {
     free(gpuList);
     
     /* Gather information from input fits header and setup output images */
-    if(inOptions.fileFormat == FITS) {
-       fitsStatus = getFitsHeader(&inOptions, &params);
-       checkFitsError(fitsStatus);
-       makeOutputFitsImages(&inOptions, &params);
-    }
-    else { 
-       getHDF5Header(&inOptions, &params);
-       makeOutputHDF5Images(&inOptions, &params);
+    switch(inOptions.fileFormat) {
+       case FITS:
+          fitsStatus = getFitsHeader(&inOptions, &params);
+          checkFitsError(fitsStatus);
+          makeOutputFitsImages(&inOptions, &params);
+          break;
+       case HDF5:
+          getHDF5Header(&inOptions, &params);
+          makeOutputHDF5Images(&inOptions, &params);
+          break;
     }
 
     /* Print some useful information */
     printOptions(inOptions, params);
-    exit(0);
     
     /* Read frequency list */
     if(getFreqList(&inOptions, &params)) { return(FAILURE); }
@@ -154,12 +155,20 @@ int main(int argc, char *argv[]) {
     free(inOptions.outPrefix);
 
     /* Close all open files */
-    fits_close_file(params.qFile, &fitsStatus);
-    fits_close_file(params.uFile, &fitsStatus);
-    fits_close_file(params.qDirty, &fitsStatus);
-    fits_close_file(params.uDirty, &fitsStatus);
-    fits_close_file(params.pDirty, &fitsStatus);
-    checkFitsError(fitsStatus);
+    switch(inOptions.fileFormat) {
+       case FITS:
+          fits_close_file(params.qFile, &fitsStatus);
+          fits_close_file(params.uFile, &fitsStatus);
+          fits_close_file(params.qDirty, &fitsStatus);
+          fits_close_file(params.uDirty, &fitsStatus);
+          fits_close_file(params.pDirty, &fitsStatus);
+          checkFitsError(fitsStatus);
+          break;
+       case HDF5:
+          H5Fclose(params.qFileh5);
+          H5Fclose(params.uFileh5);
+          break;
+    }
     
     /* Estimate the execution time */
     endTime = clock();

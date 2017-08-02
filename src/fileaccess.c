@@ -161,13 +161,13 @@ int getHDF5Header(struct optionsList *inOptions, struct parList *params) {
     error = H5LTget_dataset_ndims(params->uFileh5, PRIMARYDATA, &(params->uAxisNum));
     /* Get the sizes of each dimension */
     error = H5LTget_dataset_info(params->qFileh5, PRIMARYDATA, tempArr, NULL, NULL);
-    params->qAxisLen1 = tempArr[0];
-    params->qAxisLen2 = tempArr[1];
-    params->qAxisLen3 = tempArr[2];
+    params->qAxisLen1 = tempArr[1];
+    params->qAxisLen2 = tempArr[2];
+    params->qAxisLen3 = tempArr[0];
     error = H5LTget_dataset_info(params->uFileh5, PRIMARYDATA, tempArr, NULL, NULL);
-    params->uAxisLen1 = tempArr[0];
-    params->uAxisLen2 = tempArr[1];
-    params->uAxisLen3 = tempArr[2];
+    params->uAxisLen1 = tempArr[1];
+    params->uAxisLen2 = tempArr[2];
+    params->uAxisLen3 = tempArr[0];
     /* Get WCS information */
     H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRVAL1", &params->crval1);
     H5LTget_attribute_float(params->qFileh5, PRIMARY, "CRVAL2", &params->crval2);

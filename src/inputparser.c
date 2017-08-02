@@ -70,9 +70,6 @@ struct optionsList parseInput(char *parsetFileName) {
     } // Note strcasecmp is not standard C
     if(strcasecmp(tempStr, HDF5_STR)==SUCCESS) {
         inOptions.fileFormat = HDF5;
-        printf("ERROR: HDF5 is not supported in this version\n\n");
-        config_destroy(&cfg);
-        exit(FAILURE);
     }
     else { inOptions.fileFormat = FITS; }
     free(tempStr);
