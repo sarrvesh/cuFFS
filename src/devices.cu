@@ -181,11 +181,15 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     int fitsStatus = 0;
     long nInElements, nOutElements;
     hid_t qDataspace, uDataspace;
+    hid_t qOutDataspace, uOutDataspace, pOutDataspace;
     hid_t qDataset, uDataset;
+    hid_t qOutDataset, uOutDataset, pOutDataset;
     hid_t qMemspace, uMemspace;
-    herr_t h5ErrorQ, h5ErrorU;
-    herr_t qerror, uerror;
-    hsize_t offset[N_DIMS], count[N_DIMS], dimsm;
+    hid_t qOutMemspace, uOutMemspace, pOutMemspace;
+    herr_t h5ErrorQ, h5ErrorU, h5ErrorP;
+    herr_t qerror, uerror, perror;
+    hsize_t offsetIn[N_DIMS], countIn[N_DIMS], dimIn;
+    hsize_t offsetOut[N_DIMS], countOut[N_DIMS], dimOut;
     
     /* Set mode-specific configuration */
     switch(inOptions->fileFormat) {
@@ -201,19 +205,41 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
           break;
        case HDF5:
-          /* For HDF5, set up the hyperslab and data subset */
-          dimsm = params->qAxisLen2 * params->qAxisLen3;
+          /* For HDF5, set up the hyperslab and data subset for input */
+          dimIn = params->qAxisLen2 * params->qAxisLen3;
           qDataset   = H5Dopen2(params->qFileh5, PRIMARYDATA, H5P_DEFAULT);
           qDataspace = H5Dget_space(qDataset);
           uDataset   = H5Dopen2(params->uFileh5, PRIMARYDATA, H5P_DEFAULT);
           uDataspace = H5Dget_space(uDataset);
-          count[0] = params->qAxisLen3;
-          count[1] = 1; count[2] = params->qAxisLen2;
-          offset[0] = 0; offset[1] = 0; offset[2] = 0;
-          qMemspace = H5Screate_simple(1, &dimsm, NULL);
-          uMemspace = H5Screate_simple(1, &dimsm, NULL);
+          countIn[0] = params->qAxisLen3;
+          countIn[1] = 1; countIn[2] = params->qAxisLen2;
+          offsetIn[0] = 0; offsetIn[1] = 0; offsetIn[2] = 0;
+          qMemspace = H5Screate_simple(1, &dimIn, NULL);
+          uMemspace = H5Screate_simple(1, &dimIn, NULL);
           if( qDataset<0 || uDataset<0 || qDataspace<0 || uDataspace<0 || qMemspace<0 || uMemspace<0 )
           { printf("\nError: HDF5 allocation failed\n"); }
+
+          /* Set up the hyperslab and data subset for output */
+          dimOut = params->qAxisLen2 * inOptions->nPhi;
+          qOutDataset   = H5Dopen2(params->qDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          qOutDataspace = H5Dget_space(qOutDataset);
+          uOutDataset   = H5Dopen2(params->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          uOutDataspace = H5Dget_space(uOutDataset);
+          pOutDataset   = H5Dopen2(params->uDirtyH5, PRIMARYDATA, H5P_DEFAULT);
+          pOutDataspace = H5Dget_space(uOutDataset);
+          countOut[0] = inOptions->nPhi;
+          countOut[1] = 1; countOut[2] = params->qAxisLen2;
+          offsetOut[0] = 0; offsetOut[1] = 0; offsetOut[2] = 0;
+          qOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          uOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          pOutMemspace = H5Screate_simple(1, &dimOut, NULL);
+          if( qOutDataset<0 || uOutDataset<0 || pOutDataset<0 ||
+              qOutDataspace<0 || uOutDataspace<0 || pOutDataspace<0 ||
+              qOutMemspace<0 || uOutMemspace<0 || pOutMemspace<0 ) {
+             printf("\nError: HDF5 output allocation failed\n");
+             exit(FAILURE);
+          }
+
           /* Determine what the appropriate block and grid sizes are */
           calcThreadSize.x = selectedDeviceInfo.warpSize;
           calcBlockSize.y  = params->qAxisLen2;
@@ -277,18 +303,16 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              checkFitsError(fitsStatus);
              break;
           case HDF5:
-             offset[1] = j-1;
-             qerror = H5Sselect_hyperslab(qDataspace, H5S_SELECT_SET, offset, 
-                                    NULL, count, NULL);
-             uerror = H5Sselect_hyperslab(uDataspace, H5S_SELECT_SET, offset, 
-                                    NULL, count, NULL);
+             offsetIn[1] = j-1;
+             qerror = H5Sselect_hyperslab(qDataspace, H5S_SELECT_SET, offsetIn, 
+                                    NULL, countIn, NULL);
+             uerror = H5Sselect_hyperslab(uDataspace, H5S_SELECT_SET, offsetIn, 
+                                    NULL, countIn, NULL);
              h5ErrorQ = H5Dread(qDataset, H5T_NATIVE_FLOAT, qMemspace, 
-                                   qDataspace, H5P_DEFAULT, 
-                                   qImageArray);
+                                   qDataspace, H5P_DEFAULT, qImageArray);
              h5ErrorU = H5Dread(uDataset, H5T_NATIVE_FLOAT, uMemspace, 
-                                   uDataspace, H5P_DEFAULT, 
-                                   uImageArray);
-             if(h5ErrorQ < 0 || h5ErrorU < 0 || qerror<0 || uerror<0 ) {
+                                   uDataspace, H5P_DEFAULT, uImageArray);
+             if(h5ErrorQ<0 || h5ErrorU<0 || qerror<0 || uerror<0 ) {
                 printf("\nError: Unable to read input data cubes\n\n");
                 exit(FAILURE);
              }
@@ -331,7 +355,24 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              checkFitsError(fitsStatus);
              break;
           case HDF5:
-             /* Write HDF5 file to disk */
+             offsetOut[1] = j-1;
+             qerror = H5Sselect_hyperslab(qOutDataspace, H5S_SELECT_SET, 
+                                          offsetOut, NULL, countOut, NULL);
+             uerror = H5Sselect_hyperslab(uOutDataspace, H5S_SELECT_SET, 
+                                          offsetOut, NULL, countOut, NULL);
+             perror = H5Sselect_hyperslab(pOutDataspace, H5S_SELECT_SET, 
+                                          offsetOut, NULL, countOut, NULL);
+             h5ErrorQ = H5Dwrite(qOutDataset, H5T_NATIVE_FLOAT, qOutMemspace, 
+                                 qOutDataspace, H5P_DEFAULT, qPhi);
+             h5ErrorU = H5Dwrite(uOutDataset, H5T_NATIVE_FLOAT, uOutMemspace, 
+                                 uOutDataspace, H5P_DEFAULT, uPhi);
+             h5ErrorP = H5Dwrite(pOutDataset, H5T_NATIVE_FLOAT, pOutMemspace, 
+                                 pOutDataspace, H5P_DEFAULT, pPhi);
+             if(h5ErrorQ<0 || h5ErrorU || h5ErrorP<0 ||
+                qerror<0 || uerror<0 || perror<0 ) {
+                printf("\nError: Unable to write output data cubes\n\n");
+                exit(FAILURE);
+             }
              break;
        }
     }
@@ -351,6 +392,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        H5Sclose(qMemspace);  H5Sclose(uMemspace);
        H5Sclose(qDataspace); H5Sclose(uDataspace);
        H5Dclose(qDataset);   H5Dclose(uDataset);
+       H5Sclose(qOutMemspace);  H5Sclose(uOutMemspace);
+       H5Sclose(qOutDataspace); H5Sclose(uOutDataspace);
+       H5Dclose(qOutDataset);   H5Dclose(uOutDataset);
+       H5Sclose(pOutMemspace); H5Sclose(pOutDataspace);
+       H5Dclose(pOutDataset);
        H5Fclose(params->qDirtyH5);
        H5Fclose(params->uDirtyH5);
        H5Fclose(params->pDirtyH5);
