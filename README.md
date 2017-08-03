@@ -11,6 +11,7 @@ Dependencies
 * [cfitsio](http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html)
 * [gnuplot](http://www.gnuplot.info/) (Optional)
 * [nvcc](docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/) (Need both the driver and the toolkit)
+* [hdf5](https://support.hdfgroup.org/HDF5/)
 
 Installation
 ============
