@@ -71,6 +71,7 @@ extern "C"
 #define CLASS "CLASS"
 #define PRIMARY "/PRIMARY"
 #define PRIMARYDATA "/PRIMARY/DATA"
+#define H5IMAGE "IMAGE"
 #define HDFITS "HDFITS"
-
+#define POSITION_ID 1
 #endif

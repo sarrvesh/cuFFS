@@ -187,12 +187,18 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     herr_t qerror, uerror;
     hsize_t offset[N_DIMS], count[N_DIMS], dimsm;
     
-    /* Set some pixel access limits */
+    /* Set mode-specific configuration */
     switch(inOptions->fileFormat) {
        case FITS:
           /* For FITS, set some pixel access limits */
           fPixel = (long *)calloc(params->qAxisNum, sizeof(*fPixel));
           fPixel[0] = 1; fPixel[1] = 1;
+          /* Determine what the appropriate block and grid sizes are */
+          calcThreadSize.x = selectedDeviceInfo.warpSize;
+          calcBlockSize.y  = params->qAxisLen2;
+          calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
+          printf("INFO: Launching %dx%d blocks each with %d threads\n",
+                  calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
           break;
        case HDF5:
           /* For HDF5, set up the hyperslab and data subset */
@@ -208,6 +214,12 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           uMemspace = H5Screate_simple(1, &dimsm, NULL);
           if( qDataset<0 || uDataset<0 || qDataspace<0 || uDataspace<0 || qMemspace<0 || uMemspace<0 )
           { printf("\nError: HDF5 allocation failed\n"); }
+          /* Determine what the appropriate block and grid sizes are */
+          calcThreadSize.x = selectedDeviceInfo.warpSize;
+          calcBlockSize.y  = params->qAxisLen2;
+          calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
+          printf("INFO: Launching %dx%d blocks each with %d threads\n",
+                 calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
           break;
     }
     
@@ -248,13 +260,6 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                sizeof(*(params->phiAxis))*inOptions->nPhi, 
                cudaMemcpyHostToDevice);
     checkCudaError();
-
-    /* Determine what the appropriate block and grid sizes are */
-    calcThreadSize.x = selectedDeviceInfo.warpSize*2;
-    calcBlockSize.y  = params->qAxisLen2;
-    calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
-    printf("INFO: Launching %dx%d blocks each with %d threads\n", 
-            calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
 
     /* Process each line of sight individually */
     //cudaEventRecord(totStart);
@@ -358,8 +363,15 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 /*************************************************************
 *
 * Device code to compute Q(\phi) for HDF5 mode
-* THIS KERNEL NEEDS TO BE REWRITEEN
-* Q/UIMAGEARRAY IS IN DIFFERENT ORDER FOR FITS AND HDF5
+* 
+* In HDF5 mode, d_?ImageArray are such that the LOS varies 
+* fast than the frequency channel. Which means that each kernel
+* has to do strided read and write. 
+*
+* threadIdx.x and blockIdx.x tell us which phi to process
+* blockIdx.y tells us which LOS to process
+*
+* WHAT THIS KERNEL DOES IS WRONG. FIX IT!!!
 *
 *************************************************************/
 extern "C"
