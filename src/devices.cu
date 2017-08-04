@@ -23,6 +23,7 @@ sarrvesh.ss@gmail.com
 extern "C" {
 #include<cuda_runtime.h>
 #include<cuda.h>
+#include<time.h>
 #include "structures.h"
 #include "constants.h"
 #include "devices.h"
@@ -190,6 +191,11 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     herr_t qerror, uerror, perror;
     hsize_t offsetIn[N_DIMS], countIn[N_DIMS], dimIn;
     hsize_t offsetOut[N_DIMS], countOut[N_DIMS], dimOut;
+    clock_t startRead, stopRead;
+    clock_t startWrite, stopWrite;
+    clock_t startProc, stopProc;
+    clock_t startX, stopX;
+    float msRead=0, msWrite=0, msProc=0, msX=0, msTemp=0;
     
     /* Set mode-specific configuration */
     switch(inOptions->fileFormat) {
@@ -292,7 +298,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     for(j=1; j<=params->qAxisLen1; j++) {
        /* Read one frame at a time. In the original cube, this is 
           all sightlines in one DEC row */
-       //cudaEventRecord(readStart);
+       startRead = clock();
        switch(inOptions->fileFormat) {
           case FITS:
              fPixel[2] = j;
@@ -318,16 +324,24 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              }
              break;
        }
+       stopRead = clock();
+       msTemp = ((float)(stopRead - startRead))/CLOCKS_PER_SEC;
+       msRead += msTemp;
 
        /* Transfer input images to device */
+       startX = clock();
        cudaMemcpy(d_qImageArray, qImageArray, 
                   nInElements*sizeof(*qImageArray),
                   cudaMemcpyHostToDevice);
        cudaMemcpy(d_uImageArray, uImageArray, 
                   nInElements*sizeof(*qImageArray),
                   cudaMemcpyHostToDevice);
+       stopX = clock();
+       msTemp = ((float)(stopX - startX))/CLOCKS_PER_SEC;
+       msX += msTemp;
  
        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
+       startProc = clock();
        switch(inOptions->fileFormat) {
        case FITS:
           computeQUP_fits<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
@@ -340,13 +354,21 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
           break;
        }
+       stopProc = clock();
+       msTemp = ((float)(stopProc - startProc))/CLOCKS_PER_SEC;
+       msProc += msTemp;
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */
+       startX = clock();
        cudaMemcpy(d_qPhi, qPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
        cudaMemcpy(d_uPhi, uPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
        cudaMemcpy(d_pPhi, pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
+       stopX = clock();
+       msTemp = ((float)(stopX - startX))/CLOCKS_PER_SEC;
+       msX += msTemp;
 
        /* Write the output cubes to disk */
+       startWrite = clock();
        switch(inOptions->fileFormat) {
           case FITS:
              fits_write_pix(params->qDirty, TFLOAT, fPixel, nOutElements, qPhi, &fitsStatus);
@@ -375,6 +397,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              }
              break;
        }
+       stopWrite = clock();
+       msTemp = ((float)(stopWrite - startWrite))/CLOCKS_PER_SEC;
+       msWrite += msTemp;
     }
 
     /* Free all the allocated memory */
@@ -402,6 +427,13 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        H5Fclose(params->pDirtyH5);
        break;
     }
+
+    /* Write timing information to stdout */
+    printf("INFO: Timing Information\n");
+    printf("   Input read time: %0.3f s\n", msRead);
+    printf("   Compute time: %0.3f s\n", msProc);
+    printf("   Output write time: %0.3f s\n", msWrite);
+    printf("   D2H Transfer time: %0.3f s\n", msX);
 
     return(SUCCESS);
 }

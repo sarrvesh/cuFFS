@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
     hours   = (int)cpuTime/SEC_PER_HOUR;
     mins    = (int)(cpuTime%SEC_PER_HOUR)/SEC_PER_MIN;
     secs    = (int)(cpuTime%SEC_PER_HOUR)%SEC_PER_MIN;
-    printf("INFO: Total CPU time: %d:%d:%d\n", hours, mins, secs);
+    printf("INFO: Total execution time: %d:%d:%d\n", hours, mins, secs);
     printf("\n");
     return(SUCCESS);
 }
