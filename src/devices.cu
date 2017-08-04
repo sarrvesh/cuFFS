@@ -449,16 +449,14 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 * threadIdx.x and blockIdx.x tell us which phi to process
 * blockIdx.y tells us which LOS to process
 *
-* WHAT THIS KERNEL DOES IS WRONG. FIX IT!!!
-*
 *************************************************************/
 extern "C"
 __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int nLOS,
                            int nChan, float K, float *d_qPhi, float *d_uPhi,
                            float *d_pPhi, float *d_phiAxis, int nPhi,
                            float *d_lambdaDiff2) {
-    int i;
-    float myphi;
+    int i, readIdx, writeIdx;
+    float myphi, mylambdaDiff2;
     /* xIndex tells me what my phi is */
     const int xIndex = blockIdx.x*blockDim.x + threadIdx.x;
     /* yIndex tells me which LOS I am */
@@ -471,18 +469,21 @@ __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int 
         /* qPhi and uPhi are accumulators. So initialize to 0 */
         qPhi = 0.0; uPhi = 0.0;
         for(i=0; i<nChan; i++) {
-            sinVal = sinf(myphi*d_lambdaDiff2[yIndex+i]);
-            cosVal = cosf(myphi*d_lambdaDiff2[yIndex+i]);
-            qPhi += d_qImageArray[yIndex+i]*cosVal +
-                    d_uImageArray[yIndex+i]*sinVal;
-            uPhi += d_uImageArray[yIndex+i]*cosVal -
-                    d_qImageArray[yIndex+i]*sinVal;
+            readIdx = yIndex + i*nLOS;
+            mylambdaDiff2 = d_lambdaDiff2[i];
+            sinVal = sinf(myphi*mylambdaDiff2);
+            cosVal = cosf(myphi*mylambdaDiff2);
+            qPhi += d_qImageArray[readIdx]*cosVal +
+                    d_uImageArray[readIdx]*sinVal;
+            uPhi += d_uImageArray[readIdx]*cosVal -
+                    d_qImageArray[readIdx]*sinVal;
         }
         pPhi = sqrt(qPhi*qPhi + uPhi*uPhi);
 
-        d_qPhi[xIndex] = K*qPhi;
-        d_uPhi[xIndex] = K*uPhi;
-        d_pPhi[xIndex] = K*pPhi;
+        writeIdx = xIndex*nLOS + yIndex;
+        d_qPhi[writeIdx] = K*qPhi;
+        d_uPhi[writeIdx] = K*uPhi;
+        d_pPhi[writeIdx] = K*pPhi;
     }
 }
 
