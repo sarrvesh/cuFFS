@@ -460,7 +460,7 @@ __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int 
     /* xIndex tells me what my phi is */
     const int xIndex = blockIdx.x*blockDim.x + threadIdx.x;
     /* yIndex tells me which LOS I am */
-    const int yIndex = blockIdx.y*nPhi;
+    const int yIndex = blockIdx.y;
     float qPhi, uPhi, pPhi;
     float sinVal, cosVal;
 
