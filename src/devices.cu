@@ -205,8 +205,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           fPixel[0] = 1; fPixel[1] = 1;
           /* Determine what the appropriate block and grid sizes are */
           calcThreadSize.x = selectedDeviceInfo.warpSize;
-          calcBlockSize.y  = params->qAxisLen2;
-          calcBlockSize.x  = inOptions->nPhi/calcThreadSize.x + 1;
+          calcBlockSize.x  = params->qAxisLen2;
+          calcBlockSize.y  = inOptions->nPhi/calcThreadSize.x + 1;
           printf("INFO: Launching %dx%d blocks each with %d threads\n",
                   calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
           break;
@@ -491,18 +491,21 @@ __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int 
 *
 * Device code to compute Q(\phi)
 *
+* threadIdx.x and blockIdx.x tell us which phi to process
+* blockIdx.y tells us which LOS to process
+*
 *************************************************************/
 extern "C"
 __global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int nLOS, 
                            int nChan, float K, float *d_qPhi, float *d_uPhi, 
                            float *d_pPhi, float *d_phiAxis, int nPhi, 
                            float *d_lambdaDiff2) {
-    int i;
-    float myphi;
+    int i, readIdx, writeIdx;
+    float myphi, mylambdaDiff2;
     /* xIndex tells me what my phi is */
-    const int xIndex = blockIdx.x*blockDim.x + threadIdx.x;
+    const int xIndex = blockIdx.y*blockDim.y + threadIdx.x;
     /* yIndex tells me which LOS I am */
-    const int yIndex = blockIdx.y*nPhi;
+    const int yIndex = blockIdx.x;
     float qPhi, uPhi, pPhi;
     float sinVal, cosVal;
 
@@ -511,18 +514,21 @@ __global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int 
         /* qPhi and uPhi are accumulators. So initialize to 0 */
         qPhi = 0.0; uPhi = 0.0;
         for(i=0; i<nChan; i++) {
-            sinVal = sinf(myphi*d_lambdaDiff2[yIndex+i]);
-            cosVal = cosf(myphi*d_lambdaDiff2[yIndex+i]);
-            qPhi += d_qImageArray[yIndex+i]*cosVal + 
-                    d_uImageArray[yIndex+i]*sinVal;
-            uPhi += d_uImageArray[yIndex+i]*cosVal -
-                    d_qImageArray[yIndex+i]*sinVal;
+            mylambdaDiff2 = d_lambdaDiff2[i];
+            sinVal = sinf(myphi*mylambdaDiff2);
+            cosVal = cosf(myphi*mylambdaDiff2);
+            readIdx = yIndex + i*nChan;
+            qPhi += d_qImageArray[readIdx]*cosVal + 
+                    d_uImageArray[readIdx]*sinVal;
+            uPhi += d_uImageArray[readIdx]*cosVal -
+                    d_qImageArray[readIdx]*sinVal;
         }
         pPhi = sqrt(qPhi*qPhi + uPhi*uPhi);
 
-        d_qPhi[xIndex] = K*qPhi;
-        d_uPhi[xIndex] = K*uPhi;
-        d_pPhi[xIndex] = K*pPhi;
+        writeIdx = yIndex*nPhi + xIndex;
+        d_qPhi[writeIdx] = K*qPhi;
+        d_uPhi[writeIdx] = K*uPhi;
+        d_pPhi[writeIdx] = K*pPhi;
     }
 }
 
