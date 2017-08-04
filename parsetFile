@@ -7,14 +7,11 @@ nGPU = 1;
 fileFormat = "HDF5";
 
 // Define how fits files are stored on disk
-qCubeName = "/data/see041/wsrt_sings/cube-Q.h5";
-uCubeName = "/data/see041/wsrt_sings/cube-U.h5";
-//qCubeName = "/data/see041/wsrt_sings/cube-Q.rot.fits";
-//uCubeName = "/data/see041/wsrt_sings/cube-U.rot.fits";
+qCubeName = "/data/see041/wsrt_sings/hdf5/cube-Q.h5";
+uCubeName = "/data/see041/wsrt_sings/hdf5/cube-U.h5";
+//qCubeName = "/data/see041/wsrt_sings/fits/cube-Q.rot.fits";
+//uCubeName = "/data/see041/wsrt_sings/fits/cube-U.rot.fits";
 freqFileName = "/data/see041/wsrt_sings/frequencies-Q.txt";
-//qCubeName = "/home/see041/RMSynth_GPU/testFiles/q.sub.fits";
-//uCubeName = "/home/see041/RMSynth_GPU/testFiles/u.sub.fits";
-//freqFileName = "/home/see041/RMSynth_GPU/testFiles/freqTable";
 
 // Define the faraday depth axis. All units in rad/m/m
 plotRMSF = False;
