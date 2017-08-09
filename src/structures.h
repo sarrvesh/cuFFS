@@ -81,3 +81,11 @@ struct deviceInfoList {
     int warpSize;
     int nSM;
 };
+
+/* Structure to store timing information */
+struct timeInfo {
+   clock_t startRead, stopRead;  /* Read time */
+   clock_t startWrite, stopWrite;/* Write time */
+   clock_t startProc, stopProc;  /* Processing time */
+   clock_t startX, stopX;        /* Transfer time */
+};

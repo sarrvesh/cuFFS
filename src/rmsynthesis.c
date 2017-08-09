@@ -48,13 +48,14 @@ int main(int argc, char *argv[]) {
     int selectedDevice;
     struct deviceInfoList *gpuList;
     struct deviceInfoList selectedDeviceInfo;
+    struct timeInfoList timeInfo;
     int i, j, k;
     long *fPixel;
     LONGLONG nElements;
     float *qImageArray, *uImageArray;
     size_t size;
     clock_t startTime, endTime;
-    int cpuTime, hours, mins, secs;
+    unsigned int hours, mins, secs, cpuTime;
     
     /* Start the clock */
     startTime = clock();
@@ -172,10 +173,11 @@ int main(int argc, char *argv[]) {
     
     /* Estimate the execution time */
     endTime = clock();
-    cpuTime = (int)(endTime - startTime)/CLOCKS_PER_SEC;
-    hours   = (int)cpuTime/SEC_PER_HOUR;
-    mins    = (int)(cpuTime%SEC_PER_HOUR)/SEC_PER_MIN;
-    secs    = (int)(cpuTime%SEC_PER_HOUR)%SEC_PER_MIN;
+    cpuTime = (unsigned int)(endTime - startTime)/CLOCKS_PER_SEC;
+    hours   = (unsigned int)cpuTime/SEC_PER_HOUR;
+    mins    = (unsigned int)(cpuTime%SEC_PER_HOUR)/SEC_PER_MIN;
+    secs    = (unsigned int)(cpuTime%SEC_PER_HOUR)%SEC_PER_MIN;
+    printf("INFO: Time in second is %d\n", cpuTime);
     printf("INFO: Total execution time: %d:%d:%d\n", hours, mins, secs);
     printf("\n");
     return(SUCCESS);
