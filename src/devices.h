@@ -29,7 +29,8 @@ extern "C"
 
 struct deviceInfoList * getDeviceInformation(int *nDevices);
 int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
-                  struct deviceInfoList selectedDeviceInfo);
+                  struct deviceInfoList selectedDeviceInfo,
+                  struct timeInfoList *t);
 int getBestDevice(struct deviceInfoList *gpuList, int nDevices);
 struct deviceInfoList copySelectedDeviceInfo(struct deviceInfoList *gpuList,  
                                              int selectedDevice);

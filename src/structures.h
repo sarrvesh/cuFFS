@@ -83,9 +83,15 @@ struct deviceInfoList {
 };
 
 /* Structure to store timing information */
-struct timeInfo {
+struct timeInfoList {
    clock_t startRead, stopRead;  /* Read time */
+   float msRead;
    clock_t startWrite, stopWrite;/* Write time */
+   float msWrite;
    clock_t startProc, stopProc;  /* Processing time */
+   float msProc;
    clock_t startX, stopX;        /* Transfer time */
+   float msX;
+   clock_t startTime, endTime;   /* Total time */
+   unsigned int cpuTime;
 };

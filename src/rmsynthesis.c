@@ -48,17 +48,21 @@ int main(int argc, char *argv[]) {
     int selectedDevice;
     struct deviceInfoList *gpuList;
     struct deviceInfoList selectedDeviceInfo;
-    struct timeInfoList timeInfo;
+    struct timeInfoList t;
     int i, j, k;
     long *fPixel;
     LONGLONG nElements;
     float *qImageArray, *uImageArray;
     size_t size;
-    clock_t startTime, endTime;
-    unsigned int hours, mins, secs, cpuTime;
+    unsigned int hours, mins, secs;
+    
+    /* Initialize the clock variables */
+    t.cpuTime = 0; t.msRead = 0;
+    t.msWrite = 0; t.msProc = 0;
+    t.msX = 0;
     
     /* Start the clock */
-    startTime = clock();
+    t.startTime = clock();
     
     printf("\n");
     printf("RM Synthesis v%s\n", VERSION_STR);
@@ -96,6 +100,7 @@ int main(int argc, char *argv[]) {
     free(gpuList);
     
     /* Gather information from input fits header and setup output images */
+    t.startRead = clock();
     switch(inOptions.fileFormat) {
        case FITS:
           fitsStatus = getFitsHeader(&inOptions, &params);
@@ -107,14 +112,23 @@ int main(int argc, char *argv[]) {
           makeOutputHDF5Images(&inOptions, &params);
           break;
     }
+    t.stopRead = clock();
+    t.msRead += ((unsigned int)(t.stopRead - t.startRead))/CLOCKS_PER_SEC;
 
     /* Print some useful information */
+    t.startWrite = clock();
     printOptions(inOptions, params);
+    t.stopWrite = clock();
+    t.msWrite += ((unsigned int)(t.stopWrite - t.startWrite))/CLOCKS_PER_SEC;
     
     /* Read frequency list */
+    t.startRead = clock();
     if(getFreqList(&inOptions, &params)) { return(FAILURE); }
+    t.stopRead = clock();
+    t.msRead += ((unsigned int)(t.stopRead - t.startRead))/CLOCKS_PER_SEC;
     
     /* Find median lambda20 */
+    t.startProc = clock();
     getMedianLambda20(&params);
     
     /* Generate RMSF */
@@ -123,7 +137,11 @@ int main(int argc, char *argv[]) {
         printf("Error: Mem alloc failed while generating RMSF\n");
         return(FAILURE);
     }
+    t.stopProc = clock();
+    t.msProc += ((unsigned int)(t.stopProc - t.startProc))/CLOCKS_PER_SEC;
+    
     /* Write RMSF to disk */
+    t.startWrite = clock();
     if(writeRMSF(inOptions, params)) {
         printf("Error: Unable to write RMSF to disk\n\n");
         return(FAILURE);
@@ -138,10 +156,12 @@ int main(int argc, char *argv[]) {
         }
     }
     #endif
+    t.stopWrite = clock();
+    t.msWrite += ((unsigned int)(t.stopWrite - t.startWrite))/CLOCKS_PER_SEC;
     
     /* Start RM Synthesis */
     printf("INFO: Starting RM Synthesis\n");
-    doRMSynthesis(&inOptions, &params, selectedDeviceInfo);
+    doRMSynthesis(&inOptions, &params, selectedDeviceInfo, &t);
 
     /* Free up all allocated memory */
     free(params.rmsf);
@@ -172,12 +192,17 @@ int main(int argc, char *argv[]) {
     }
     
     /* Estimate the execution time */
-    endTime = clock();
-    cpuTime = (unsigned int)(endTime - startTime)/CLOCKS_PER_SEC;
-    hours   = (unsigned int)cpuTime/SEC_PER_HOUR;
-    mins    = (unsigned int)(cpuTime%SEC_PER_HOUR)/SEC_PER_MIN;
-    secs    = (unsigned int)(cpuTime%SEC_PER_HOUR)%SEC_PER_MIN;
-    printf("INFO: Time in second is %d\n", cpuTime);
+    t.endTime = clock();
+    t.cpuTime = (unsigned int)(t.endTime - t.startTime)/CLOCKS_PER_SEC;
+    hours   = (unsigned int)t.cpuTime/SEC_PER_HOUR;
+    mins    = (unsigned int)(t.cpuTime%SEC_PER_HOUR)/SEC_PER_MIN;
+    secs    = (unsigned int)(t.cpuTime%SEC_PER_HOUR)%SEC_PER_MIN;
+    /* Write timing information to stdout */
+    printf("INFO: Timing Information\n");
+    printf("   Input read time: %0.3f s\n", t.msRead);
+    printf("   Compute time: %0.3f s\n", t.msProc);
+    printf("   Output write time: %0.3f s\n", t.msWrite);
+    printf("   D2H Transfer time: %0.3f s\n", t.msX);
     printf("INFO: Total execution time: %d:%d:%d\n", hours, mins, secs);
     printf("\n");
     return(SUCCESS);
