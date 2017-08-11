@@ -8,3 +8,8 @@ V0.2     Code tested using a single GPU on the Bracewell cluster.
          Tagged on July 25, 2017.
          Q, U, and P dirty maps are processed in one kernel.
          Each line of sight is processed separately.
+V0.3     Code tested using a single GPU on the Bracewell cluster.
+         Tagged on August 11, 2017.
+         Supports both HDF5 and FITS input data formats.
+         FITS input cubes must be rotated such that the freq axis is axis1.
+===============================================================================
