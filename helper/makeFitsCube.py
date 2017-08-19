@@ -54,16 +54,13 @@ def concatenateWithMemMap(validFitsList, shape, memMapName, FLAG):
     Return the concatenated array and frequency list
     """
     concatCube = np.memmap(memMapName, dtype='float32', mode='w+',\
-                           shape=(1, len(validFitsList), shape[-2], shape[-1]))
+                           shape=(len(validFitsList), shape[-2], shape[-1]))
     freqList = []
     for i, name in enumerate(validFitsList):
-        tempData = pf.open(name, readonly=True)[0].data[0]
+        tempData = np.squeeze(pf.open(name, readonly=True)[0].data[0])
         tempHead = pf.open(name, readonly=True)[0].header
         freqList.append(tempHead[FLAG])
-        if len(shape) == 3:
-            concatCube[0, i, :] = tempData[0, :]
-        if len(shape) == 4:
-            concatCube[0, i, :] = tempData[0, 0, :]
+        concatCube[i] = np.copy(tempData)
     return concatCube, freqList
 
 def main(options):
@@ -115,8 +112,8 @@ def main(options):
     # Rotate the cube if -s is used
     if options.swapaxis:
        rotCube = np.memmap(memMapName, dtype='float32', mode='w+',\
-                           shape=(1, shape[-2], shape[-1], len(validFitsList)))
-       rotCube = np.swapaxes(finalCube, 1, 3)
+                           shape=(shape[-2], shape[-1], len(validFitsList)))
+       rotCube = np.swapaxes(finalCube, 0, 2)
        print "INFO: Rotated cube has shape ", rotCube.shape
        newHeader = pf.open(validFitsList[0], readonly=True)[0].header
        newHeader['CDELT1'] = header['CDELT3']
