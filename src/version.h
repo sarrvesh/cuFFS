@@ -27,9 +27,9 @@ sarrvesh.ss@gmail.com
 extern "C"
 #endif
 
-#define VERSION_STR      "0.2"
+#define VERSION_STR      "0.3"
 #define VERSION_MAJOR    0
-#define VERSION_MINOR    2
-#define VERSION_DATE_STR "2017-07-25"
+#define VERSION_MINOR    3
+#define VERSION_DATE_STR "2017-08-11"
 
 #endif

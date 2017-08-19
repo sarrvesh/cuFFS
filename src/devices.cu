@@ -281,7 +281,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     for(i=0;i<params->qAxisLen3;i++)
         lambdaDiff2[i] = 2.0*(params->lambda2[i]-params->lambda20);
     t->stopProc = clock();
-    t->msProc += ((unsigned int)(t->stopProc - t->startProc))/CLOCKS_PER_SEC;
+    t->msProc += ((float)(t->stopProc - t->startProc))/CLOCKS_PER_SEC;
     
     /* Transfer \lambda^2 - \lambda^2_0 to device */
     t->startX = clock();
@@ -295,7 +295,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                cudaMemcpyHostToDevice);
     checkCudaError();
     t->stopX = clock();
-    t->msX += ((unsigned int)(t->stopX - t->startX))/CLOCKS_PER_SEC;
+    t->msX += ((float)(t->stopX - t->startX))/CLOCKS_PER_SEC;
 
     /* Process each line of sight individually */
     //cudaEventRecord(totStart);
@@ -329,7 +329,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              break;
        }
        t->stopRead = clock();
-       t->msRead += ((unsigned int)(t->stopRead - t->startRead))/CLOCKS_PER_SEC;
+       t->msRead += ((float)(t->stopRead - t->startRead))/CLOCKS_PER_SEC;
 
        /* Transfer input images to device */
        t->startX = clock();
@@ -340,7 +340,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                   nInElements*sizeof(*qImageArray),
                   cudaMemcpyHostToDevice);
        t->stopX = clock();
-       t->msX += ((unsigned int)(t->stopX - t->startX))/CLOCKS_PER_SEC;
+       t->msX += ((float)(t->stopX - t->startX))/CLOCKS_PER_SEC;
  
        /* Launch kernels to compute Q(\phi), U(\phi), and P(\phi) */
        t->startProc = clock();
@@ -357,7 +357,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           break;
        }
        t->stopProc = clock();
-       t->msProc += ((unsigned int)(t->stopProc - t->startProc))/CLOCKS_PER_SEC;
+       t->msProc += ((float)(t->stopProc - t->startProc))/CLOCKS_PER_SEC;
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */
        t->startX = clock();
@@ -365,7 +365,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        cudaMemcpy(d_uPhi, uPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
        cudaMemcpy(d_pPhi, pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
        t->stopX = clock();
-       t->msX = ((unsigned int)(t->stopX - t->startX))/CLOCKS_PER_SEC;
+       t->msX += ((float)(t->stopX - t->startX))/CLOCKS_PER_SEC;
 
        /* Write the output cubes to disk */
        t->startWrite = clock();
@@ -398,7 +398,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              break;
        }
        t->stopWrite = clock();
-       t->msWrite = ((unsigned int)(t->stopWrite - t->startWrite))/CLOCKS_PER_SEC;
+       t->msWrite += ((float)(t->stopWrite - t->startWrite))/CLOCKS_PER_SEC;
     }
 
     /* Free all the allocated memory */
