@@ -111,7 +111,27 @@ def main(options):
     # Get a template header from a fits file
     header = pf.open(validFitsList[0], readonly=True)[0].header
     print 'INFO: Writing the concatenated fits file to {}'.format(options.out)
-    hdu = pf.PrimaryHDU(data=finalCube, header=header)
+    
+    # Rotate the cube if -s is used
+    if options.swapaxis:
+       rotCube = np.memmap(memMapName, dtype='float32', mode='w+',\
+                           shape=(1, shape[-2], shape[-1], len(validFitsList)))
+       rotCube = np.swapaxes(finalCube, 1, 3)
+       print "INFO: Rotated cube has shape ", rotCube.shape
+       newHeader = pf.open(validFitsList[0], readonly=True)[0].header
+       newHeader['CDELT1'] = header['CDELT3']
+       newHeader['CRVAL1'] = header['CRVAL3']
+       newHeader['CRPIX1'] = header['CRPIX3']
+       newHeader['CTYPE1'] = header['CTYPE3']
+       
+       newHeader['CDELT3'] = header['CDELT1']
+       newHeader['CRVAL3'] = header['CRVAL1']
+       newHeader['CRPIX3'] = header['CRPIX1']
+       newHeader['CTYPE3'] = header['CTYPE1']
+       
+       hdu = pf.PrimaryHDU(data=rotCube, header=newHeader)
+    else:
+       hdu = pf.PrimaryHDU(data=finalCube, header=header)
     hdu.writeto(options.out)
     os.remove(memMapName)
 
@@ -127,5 +147,7 @@ if __name__ == '__main__':
     opt.add_option('-r', '--restfrq', help='Frequency is stored in RESTFRQ '+
                    'instead of CRVAL3 [default: False]', default=False, 
                    action='store_true')
+    opt.add_option('-s', '--swapaxis', help='Make frequency axis as the first '+
+                   'axis [default: False]', default=False, action='store_true')
     inOpts, arguments = opt.parse_args()
     main(inOpts)
