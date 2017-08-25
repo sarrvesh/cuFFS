@@ -43,8 +43,8 @@ def checkFitsShape(fitsList):
     """
     for i, name in enumerate(fitsList):
         if i == 0:
-            templateShape = pf.open(name, readonly=True)[0].data[0].shape
-        elif templateShape != pf.open(name, readonly=True)[0].data[0].shape:
+            templateShape = pf.open(name, readonly=True)[0].data.shape
+        elif templateShape != pf.open(name, readonly=True)[0].data.shape:
             raise Exception('Fits file {} has an incompatible shape'.format(name))
     return templateShape
 
@@ -57,11 +57,14 @@ def concatenateWithMemMap(validFitsList, shape, memMapName, FLAG):
                            shape=(len(validFitsList), shape[-2], shape[-1]))
     freqList = []
     for i, name in enumerate(validFitsList):
-        tempData = np.squeeze(pf.open(name, readonly=True)[0].data[0])
+        if len(shape) == 2:
+            tempData = np.squeeze(pf.open(name, readonly=True)[0].data)
+        else:
+            tempData = np.squeeze(pf.open(name, readonly=True)[0].data[0])
         tempHead = pf.open(name, readonly=True)[0].header
         freqList.append(tempHead[FLAG])
         concatCube[i] = np.copy(tempData)
-    return concatCube, freqList
+    return concatCube, np.array(freqList)
 
 def main(options):
     """
@@ -89,15 +92,18 @@ def main(options):
     # Check if the list of supplied fits files have the same shape
     shape = checkFitsShape(validFitsList)
     print 'INFO: All fits files have shape {}'.format(shape)
-    if len(shape) not in [3, 4]:
+    if len(shape) not in [2, 3, 4]:
         raise Exception('Fits files have unknown shape')
-    
+
     # Merge the cubes
-    if options.restfrq:
+    if options.mwafiles:
+        FLAG = 'FREQ'
+    elif options.restfrq:
         FLAG = 'RESTFREQ'
     else:
         FLAG = 'CRVAL3'
     finalCube, freqList = concatenateWithMemMap(validFitsList, shape, memMapName, FLAG)
+    if options.mwafiles: freqList *= 1.e6
     
     # Write the frequency list to disk
     f = open(options.freq, "w")
@@ -108,6 +114,14 @@ def main(options):
     # Get a template header from a fits file
     header = pf.open(validFitsList[0], readonly=True)[0].header
     print 'INFO: Writing the concatenated fits file to {}'.format(options.out)
+    
+    # create dummy axis 3 header entries if there are only 2 axes
+    if len(shape) == 2:
+        header['NAXIS']=3
+        header['CTYPE3']='FREQ'
+        header['CRPIX3']=1
+        header['CRVAL3']=freqList[0]
+        header['CDELT3']=freqList[1]-freqList[0]
     
     # Rotate the cube if -s is used
     if options.swapaxis:
@@ -144,6 +158,9 @@ if __name__ == '__main__':
     opt.add_option('-r', '--restfrq', help='Frequency is stored in RESTFRQ '+
                    'instead of CRVAL3 [default: False]', default=False, 
                    action='store_true')
+    opt.add_option('-m', '--mwafiles', help='FITS files are MWA based (they '+
+                   'have FREQ header keyword in MHz); this overrides --restfrq '+
+                   '[default False]', default=False, action='store_true')
     opt.add_option('-s', '--swapaxis', help='Make frequency axis as the first '+
                    'axis [default: False]', default=False, action='store_true')
     inOpts, arguments = opt.parse_args()
