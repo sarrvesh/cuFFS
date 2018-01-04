@@ -1,13 +1,13 @@
 # Rootdir of libconfig
-LIB_CONFIG_PATH="/media/sarrvesh/Work/INSTALLATIONS/libconfig"
+LIB_CONFIG_PATH="/home/sarrvesh/Documents/libconfig"
 # Rootdir of cfitsio
-CFITSIO_PATH="/media/sarrvesh/Work/INSTALLATIONS/cfitsio"
+CFITSIO_PATH="/home/sarrvesh/Documents/cfitsio"
 #Rootdir of CUDA Toolkit
-CUDA_PATH="/media/sarrvesh/Work/INSTALLATIONS/cuda-8.0.61"
+CUDA_PATH="/home/sarrvesh/Documents/cuda"
 #Rootdir of HDF5
-HDF5_PATH="/media/sarrvesh/Work/INSTALLATIONS/hdf5"
+HDF5_PATH="/home/sarrvesh/Documents/hdf5"
 # NVCC flags
-NVCC_FLAGS=arch=compute_60,code=sm_60
+NVCC_FLAGS=arch=compute_50,code=sm_50
 
 #####################################################################
 ################## DO NOT EDIT BELOW THIS LINE ######################
