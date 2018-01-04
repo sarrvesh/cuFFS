@@ -311,6 +311,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
                            uImageArray, NULL, &fitsStatus);
              checkFitsError(fitsStatus);
+             // PRINT FITS VALUES
+             printf("%f %f %f %f %f %f %f %f\n", qImageArray[0], qImageArray[1], qImageArray[2], qImageArray[3], qImageArray[4], qImageArray[5], qImageArray[6], qImageArray[7]);
              break;
           case HDF5:
              offsetIn[1] = j-1;
@@ -356,14 +358,15 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
                          d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
           break;
        }
+       cudaThreadSynchronize();
        t->stopProc = clock();
        t->msProc += ((float)(t->stopProc - t->startProc))/CLOCKS_PER_SEC;
 
        /* Move Q(\phi), U(\phi) and P(\phi) to host */
        t->startX = clock();
-       cudaMemcpy(d_qPhi, qPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
-       cudaMemcpy(d_uPhi, uPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
-       cudaMemcpy(d_pPhi, pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
+       cudaMemcpy(qPhi, d_qPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
+       cudaMemcpy(uPhi, d_uPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
+       cudaMemcpy(pPhi, d_pPhi, nOutElements*sizeof(*qPhi), cudaMemcpyDeviceToHost);
        t->stopX = clock();
        t->msX += ((float)(t->stopX - t->startX))/CLOCKS_PER_SEC;
 
@@ -405,7 +408,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     free(qImageArray); free(uImageArray);
     cudaFree(d_qImageArray); cudaFree(d_uImageArray);
     free(qPhi); free(uPhi); free(pPhi);
-    cudaFreeHost(d_qPhi); cudaFreeHost(d_uPhi); cudaFreeHost(d_pPhi);
+    cudaFree(d_qPhi); cudaFree(d_uPhi); cudaFree(d_pPhi);
     free(lambdaDiff2); cudaFree(d_lambdaDiff2);
     cudaFree(d_phiAxis);
     switch(inOptions->fileFormat) {

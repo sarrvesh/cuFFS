@@ -203,6 +203,9 @@ void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params)
    sprintf(filenamefull, "%s%s.fits", inOptions->outPrefix, P_DIRTY);
    fits_create_file(&params->pDirty, filenamefull, &stat);
    checkFitsError(stat);
+
+   /* Assign empty string to fComment */
+   sprintf(fComment, " ");
    
    /* What are the output cube sizes */
    naxis[0] = inOptions->nPhi;

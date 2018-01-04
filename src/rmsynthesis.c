@@ -205,5 +205,6 @@ int main(int argc, char *argv[]) {
     printf("   D2H Transfer time: %0.3f s\n", t.msX);
     printf("INFO: Total execution time: %d:%d:%d\n", hours, mins, secs);
     printf("\n");
+    cudaDeviceReset();
     return(SUCCESS);
 }
