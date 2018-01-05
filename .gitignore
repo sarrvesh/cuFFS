@@ -32,4 +32,5 @@ rmsynthesis
 # Debug files
 *.dSYM/
 
-souce.sh
+souce*
+test*
