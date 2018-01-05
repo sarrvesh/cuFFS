@@ -15,7 +15,7 @@ Dependencies
 
 Installation
 ============
-See build_brinkley.sh for sample compiler instruction.
+See build.sh for sample compiler instruction.
 
 Notes
 =====
