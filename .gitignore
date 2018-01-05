@@ -32,5 +32,6 @@ rmsynthesis
 # Debug files
 *.dSYM/
 
+# User defined 
 souce*
 test*
