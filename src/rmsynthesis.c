@@ -49,11 +49,6 @@ int main(int argc, char *argv[]) {
     struct deviceInfoList *gpuList;
     struct deviceInfoList selectedDeviceInfo;
     struct timeInfoList t;
-    int i, j, k;
-    long *fPixel;
-    LONGLONG nElements;
-    float *qImageArray, *uImageArray;
-    size_t size;
     unsigned int hours, mins, secs;
     
     /* Initialize the clock variables */
@@ -110,6 +105,12 @@ int main(int argc, char *argv[]) {
        case HDF5:
           getHDF5Header(&inOptions, &params);
           makeOutputHDF5Images(&inOptions, &params);
+          break;
+       default:
+          // Control should never reach this point.
+          printf("ERROR: Encountered an unknown error.\n");
+          printf("ERROR: Contact Sarrvesh if you see this.");
+          exit(FAILURE);
           break;
     }
     t.stopRead = clock();
@@ -189,6 +190,11 @@ int main(int argc, char *argv[]) {
           H5Fclose(params.qFileh5);
           H5Fclose(params.uFileh5);
           break;
+       default:
+          // Control should never reach this point
+          printf("ERROR: Encountered an unknown error.\n");
+          printf("ERROR: Contact Sarrvesh if you see this.");
+          exit(FAILURE);
     }
     
     /* Estimate the execution time */

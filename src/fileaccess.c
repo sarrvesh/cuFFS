@@ -70,6 +70,10 @@ void checkInputFiles(struct optionsList *inOptions, struct parList *params) {
       }
       /* Check if the hdf5 files are compatible with HDFITS format */
       error = H5LTget_attribute_string(params->qFileh5, "/", "CLASS", buf);
+      if(error < 0) {
+         printf("ERROR: Specified HDF5 file is not in HDFITS format\n\n");
+         exit(FAILURE);
+      }
    }
    else {}
    
@@ -181,6 +185,8 @@ int getHDF5Header(struct optionsList *inOptions, struct parList *params) {
     H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE1", params->ctype1);
     H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE2", params->ctype2);
     H5LTget_attribute_string(params->qFileh5, PRIMARY, "CTYPE3", params->ctype3);
+    
+    return error;
 }
 
 /*************************************************************
@@ -300,7 +306,7 @@ void makeOutputHDF5Images(struct optionsList *inOptions, struct parList *params)
    qGrp = H5Gcreate(params->qDirtyH5, PRIMARY, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    uGrp = H5Gcreate(params->uDirtyH5, PRIMARY, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    pGrp = H5Gcreate(params->pDirtyH5, PRIMARY, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-   if( qErr<0 || uErr<0 || pErr<0) {
+   if( qGrp<0 || uGrp<0 || pGrp<0) {
       printf("Error: Unable to create groups in output HDF5 files\n");
       exit(FAILURE);
    }
