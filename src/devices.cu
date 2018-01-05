@@ -28,9 +28,9 @@ extern "C" {
 #include "constants.h"
 #include "devices.h"
 #include "fileaccess.h"
-__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int nLOS, 
-                           int nChan, float K, float *d_qPhi, float *d_uPhi, 
-                           float *d_pPhi, float *d_phiAxis, int nPhi, 
+__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, 
+                           int nChan, int nPhi, float K, float *d_qPhi,  
+                           float *d_uPhi, float *d_pPhi, float *d_phiAxis, 
                            float *d_lambdaDiff2);
 __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int nLOS,
                            int nChan, float K, float *d_qPhi, float *d_uPhi,
@@ -201,7 +201,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
           fPixel[0] = 1; fPixel[1] = 1;
           /* Determine what the appropriate block and grid sizes are */
           calcThreadSize.x = selectedDeviceInfo.warpSize;
-          calcBlockSize.x  = params->qAxisLen2;
+          calcBlockSize.x  = params->qAxisLen1; // Number of RA or LOS in this frame
           calcBlockSize.y  = inOptions->nPhi/calcThreadSize.x + 1;
           printf("INFO: Launching %dx%d blocks each with %d threads\n",
                   calcBlockSize.x, calcBlockSize.y, calcThreadSize.x);
@@ -253,8 +253,8 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
     
     /* Allocate memory on the host */
     t->startProc = clock();
-    nInElements = params->qAxisLen2 * params->qAxisLen3;
-    nOutElements= inOptions->nPhi * params->qAxisLen2;
+    nInElements = params->qAxisLen1 * params->qAxisLen3;
+    nOutElements= inOptions->nPhi * params->qAxisLen1;
     lambdaDiff2 = (float *)calloc(params->qAxisLen3, sizeof(*lambdaDiff2));
     qImageArray = (float *)calloc(nInElements, sizeof(*qImageArray));
     uImageArray = (float *)calloc(nInElements, sizeof(*uImageArray));
@@ -299,7 +299,7 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
 
     /* Process each line of sight individually */
     //cudaEventRecord(totStart);
-    for(j=1; j<=params->qAxisLen1; j++) {
+    for(j=1; j<=params->qAxisLen2; j++) {
        /* Read one frame at a time. In the original cube, this is 
           all sightlines in one DEC row */
        t->startRead = clock();
@@ -311,8 +311,6 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
              fits_read_pix(params->uFile, TFLOAT, fPixel, nInElements, NULL,
                            uImageArray, NULL, &fitsStatus);
              checkFitsError(fitsStatus);
-             // PRINT FITS VALUES
-             printf("%f %f %f %f %f %f %f %f\n", qImageArray[0], qImageArray[1], qImageArray[2], qImageArray[3], qImageArray[4], qImageArray[5], qImageArray[6], qImageArray[7]);
              break;
           case HDF5:
              offsetIn[1] = j-1;
@@ -348,9 +346,9 @@ int doRMSynthesis(struct optionsList *inOptions, struct parList *params,
        t->startProc = clock();
        switch(inOptions->fileFormat) {
        case FITS:
-          computeQUP_fits<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray, 
-                         params->qAxisLen2, params->qAxisLen3, params->K, d_qPhi,
-                         d_uPhi, d_pPhi, d_phiAxis, inOptions->nPhi, d_lambdaDiff2);
+          computeQUP_fits<<<calcBlockSize, calcThreadSize>>>(d_qImageArray,
+                   d_uImageArray, params->qAxisLen3, inOptions->nPhi,
+                   params->K, d_qPhi, d_uPhi, d_pPhi, d_phiAxis, d_lambdaDiff2);
           break;
        case HDF5:
           computeQUP_hdf5<<<calcBlockSize, calcThreadSize>>>(d_qImageArray, d_uImageArray,
@@ -491,14 +489,14 @@ __global__ void computeQUP_hdf5(float *d_qImageArray, float *d_uImageArray, int 
 *
 *************************************************************/
 extern "C"
-__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int nLOS, 
-                           int nChan, float K, float *d_qPhi, float *d_uPhi, 
-                           float *d_pPhi, float *d_phiAxis, int nPhi, 
+__global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, 
+                           int nChan, int nPhi, float K, float *d_qPhi,  
+                           float *d_uPhi, float *d_pPhi, float *d_phiAxis, 
                            float *d_lambdaDiff2) {
     int i, readIdx, writeIdx;
     float myphi, mylambdaDiff2;
     /* xIndex tells me what my phi is */
-    const int xIndex = blockIdx.y*blockDim.y + threadIdx.x;
+    const int xIndex = blockIdx.y*blockDim.x + threadIdx.x;
     /* yIndex tells me which LOS I am */
     const int yIndex = blockIdx.x;
     float qPhi, uPhi, pPhi;
@@ -512,7 +510,7 @@ __global__ void computeQUP_fits(float *d_qImageArray, float *d_uImageArray, int 
             mylambdaDiff2 = d_lambdaDiff2[i];
             sinVal = sinf(myphi*mylambdaDiff2);
             cosVal = cosf(myphi*mylambdaDiff2);
-            readIdx = yIndex + i*nChan;
+            readIdx = yIndex*nChan + i;
             qPhi += d_qImageArray[readIdx]*cosVal + 
                     d_uImageArray[readIdx]*sinVal;
             uPhi += d_uImageArray[readIdx]*cosVal -
