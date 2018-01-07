@@ -1,4 +1,4 @@
-# RMSynth_GPU
+# CUDA-accelerated Fast Faraday Synthesis (cuFFS)
 
 Code Status
 ============
