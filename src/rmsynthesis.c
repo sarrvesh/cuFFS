@@ -162,6 +162,7 @@ int main(int argc, char *argv[]) {
     
     /* Start RM Synthesis */
     printf("INFO: Starting RM Synthesis\n");
+
     doRMSynthesis(&inOptions, &params, selectedDeviceInfo, &t);
 
     /* Free up all allocated memory */
