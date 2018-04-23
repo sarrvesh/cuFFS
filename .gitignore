@@ -33,5 +33,8 @@ rmsynthesis
 *.dSYM/
 
 # User defined 
+build*
+.idea*
+.project*
 souce*
 test*
