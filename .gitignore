@@ -33,5 +33,4 @@ rmsynthesis
 *.dSYM/
 
 # User defined 
-souce*
 test*
