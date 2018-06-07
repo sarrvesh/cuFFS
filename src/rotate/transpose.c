@@ -43,6 +43,7 @@ int transpose(char *inName, char *outName) {
    long fPixel[CUBE_DIM];
    long nElements;
    int inIdx, outIdx;
+   long frameSize, frameOffset, frameAndRowOffset, outRowOffset;
    clock_t start, end;
    float readTime, rotTime, writeTime, assignTime=0, idxTime = 0;
       
@@ -149,14 +150,16 @@ int transpose(char *inName, char *outName) {
    
    /* Rotate the input array */
    start = clock();
+   frameSize = outAxisLen[0] * outAxisLen[1];
    for(int frame=0; frame<inAxisLen[2]; frame++) {
+      frameOffset = frame*inAxisLen[2]*inAxisLen[1];
       for(int row=0; row<inAxisLen[1]; row++) {
+         frameAndRowOffset = frameOffset + row*inAxisLen[0];
+         outRowOffset = row*outAxisLen[0] + frame;
          for(int col=0; col<inAxisLen[0]; col++) {
             //start = clock();
-            inIdx = frame*inAxisLen[2]*inAxisLen[1] + 
-                    row*inAxisLen[0] + col;
-            outIdx = col*outAxisLen[0]*outAxisLen[1] + 
-                     row*outAxisLen[0] + frame;
+            inIdx = frameAndRowOffset + col;
+            outIdx = col*frameSize + outRowOffset;
             //end = clock();
             //idxTime += (float)(end - start)/CLOCKS_PER_SEC;
             
