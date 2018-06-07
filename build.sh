@@ -14,8 +14,8 @@ NVCC_FLAGS=arch=compute_50,code=sm_50
 #####################################################################
 
 # Set C flags
-#GCC_FLAGS="-Wextra -Wall -Wunreachable-code -Wswitch-default -Wstrict-prototypes -Wpointer-arith -Wshadow -Wfloat-equal -Wuninitialized -ggdb"
-GCC_FLAGS="-O3 -march=native"
+GCC_FLAGS="-Wextra -Wall -Wunreachable-code -Wswitch-default -Wstrict-prototypes -Wpointer-arith -Wshadow -Wfloat-equal -Wuninitialized"
+#GCC_FLAGS="-O3 -march=native"
 
 # Test if gnuplot is installed
 printf "Searching for gnuplot: "
@@ -49,4 +49,4 @@ printf "compiling rotate.c\n"
 gcc $GCC_FLAGS -c src/rotate/fitsrotate.c
 gcc $GCC_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rotate/transpose.c
 
-gcc -O3 -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ transpose.o fitsrotate.o -o fitsrot -lcfitsio -lm
+gcc $GCC_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ transpose.o fitsrotate.o -o fitsrot -lcfitsio -lm
