@@ -6,11 +6,14 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<time.h>
+#include<string.h>
+#include<errno.h>
 
 #include "constants.h"
 #include "fitsio.h"
 
-#define MMAP_FILE "./MMAP_FILE"
+#define MMAP_FILE_IN  "./MMAP_IN_FILE"
+#define MMAP_FILE_OUT "./MMAP_OUT_FILE"
 
 /*************************************************************
 *
@@ -37,19 +40,19 @@ int transpose(char *inName, char *outName) {
    char fitsComment[FLEN_COMMENT];
    int nAxis;
    long inAxisLen[CUBE_DIM], outAxisLen[CUBE_DIM];
-   float *thisInFrame;
    long fPixel[CUBE_DIM];
-   long nInElements, nOutElements;
+   long nElements;
    int inIdx, outIdx;
    clock_t start, end;
-   float readTime=0, rotTime=0, writeTime=0, closeTime=0;
+   float readTime, rotTime, writeTime, assignTime=0, idxTime = 0;
       
    /* Variables for the memory map */
-   int fDescriptor;
-   off_t seekStatus;
-   ssize_t writeStatus;
-   int status;
-   float *mmappedData;
+   int fDescIn, fDescOut;
+   char errStr[FLEN_COMMENT];
+   off_t seekStatIn, seekStatOut;
+   ssize_t writeStatIn, writeStatOut;
+   int statIn, statOut;
+   float *mmappedIn, *mmappedOut;
    size_t mmapLen;
    
    /* Try opening the input FItS file */
@@ -89,8 +92,9 @@ int transpose(char *inName, char *outName) {
    /* Create a memory mapped file */
    /* Based on code found on this web page: */
    /* https://www.linuxquestions.org/questions/programming-9/mmap-tutorial-c-c-511265/ */
-   fDescriptor = open(MMAP_FILE, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-   if(fDescriptor < 0) {
+   fDescIn  = open(MMAP_FILE_IN,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+   fDescOut = open(MMAP_FILE_OUT, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+   if((fDescIn < 0) || (fDescOut < 0)) {
       printf("ERROR: Unable to create a temp file.\n");
       return(FAILURE);
    }
@@ -99,92 +103,102 @@ int transpose(char *inName, char *outName) {
    
    /* Stretch the file size to match the size of the mmap */
    /* NOTE: Code segfaults without stretch and writing the last byte */
-   seekStatus = 0;
-   seekStatus = lseek(fDescriptor, mmapLen-1, SEEK_SET);
-   if(seekStatus < 0) {
-      close(fDescriptor);
+   seekStatIn  = seekStatOut = 0;
+   seekStatIn  = lseek(fDescIn,  mmapLen-1, SEEK_SET);
+   seekStatOut = lseek(fDescOut, mmapLen-1, SEEK_SET);
+   if((seekStatIn < 0) || (seekStatOut < 0)) {
+      close(fDescIn); close(fDescOut);
       printf("ERROR: Unable to stretch the temp file.\n");
       printf("Please contact Sarrvesh if you see this.\n");
       return(FAILURE);
    }
    
    /* Write a single character to the end of the stretched file */
-   writeStatus = 0;
-   writeStatus = write(fDescriptor, "", 1);
-   if(writeStatus < 0) {
-      close(fDescriptor);
+   writeStatIn = writeStatOut = 0;
+   writeStatIn = write(fDescIn, "", 1);
+   writeStatOut= write(fDescOut,"", 1);
+   if((writeStatIn < 0) || (writeStatOut < 0)) {
+      close(fDescIn); close(fDescOut);
       printf("ERROR: Unable to write to the temp file.\n");
       return(FAILURE);
    }
    
    /* Now, map the file to memory */
-   mmappedData = mmap(NULL, mmapLen, PROT_READ | PROT_WRITE, 
-                      MAP_SHARED, fDescriptor, 0);
-   if(mmappedData == MAP_FAILED) {
-      close(fDescriptor);
+   mmappedIn = mmap(NULL, mmapLen, PROT_READ | PROT_WRITE, 
+                      MAP_SHARED, fDescIn, 0);
+   mmappedOut= mmap(NULL, mmapLen, PROT_READ | PROT_WRITE, 
+                      MAP_SHARED, fDescOut,0);
+   if((mmappedIn == MAP_FAILED) || (mmappedOut == MAP_FAILED)) {
+      close(fDescIn); close(fDescOut);
       printf("ERROR: Unable to create mmap.");
+      strerror_r(errno, errStr, FLEN_COMMENTS);
+      puts(errStr);
       return(FAILURE);
    }
    
    /* Read the FITS cube, rotate, and then write to memory map */
-   nInElements = inAxisLen[0] * inAxisLen[1];
-   thisInFrame = (float *)calloc(nInElements, sizeof(*thisInFrame));
-   fPixel[0] = fPixel[1] = 1;
-   for(int frame=0; frame<inAxisLen[2]; frame++) {
-      fPixel[2] = frame+1;
-      start = clock();
-      fits_read_pix(in, TFLOAT, fPixel, nInElements, 
-                    NULL, thisInFrame, NULL, &fitsStatus);
-      if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
-      end = clock();
-      readTime += (float)(end - start)/CLOCKS_PER_SEC;
-      
-      /* Rotate the read frame and write to the mmap array */
-      start = clock();
-      for(int row=0; row<inAxisLen[1]; row++) {
-         for(int col=0; col<inAxisLen[0]; col++) {
-            outIdx = col*outAxisLen[0]*outAxisLen[1] + 
-                     row*outAxisLen[0] + frame;
-            inIdx  = row*inAxisLen[0] + col;
-            mmappedData[outIdx] = thisInFrame[inIdx];
-         }
-      }
-      end = clock();
-      rotTime += (float)(end - start)/CLOCKS_PER_SEC;
-   }
-   printf("Read time: %0.2f seconds\n", readTime);
-   printf("Rotation time: %0.2f seconds\n", rotTime);
-   
-   /* Write the mmappedData to disk */
    start = clock();
    fPixel[0] = fPixel[1] = fPixel[2] = 1;
-   nOutElements = inAxisLen[0] * inAxisLen[1] * inAxisLen[2];
-   fits_write_pix(out, TFLOAT, fPixel, nOutElements, 
-                  mmappedData, &fitsStatus);
+   nElements = inAxisLen[0] * inAxisLen[1] * inAxisLen[2];
+   fits_read_pix(in, TFLOAT, fPixel, nElements, 
+                 NULL, mmappedIn, NULL, &fitsStatus);
+   if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
+   end = clock();
+   readTime = (float)(end - start)/CLOCKS_PER_SEC;
+   printf("INFO: Read time: %f seconds\n", readTime);
+   
+   /* Rotate the input array */
+   start = clock();
+   for(int frame=0; frame<inAxisLen[2]; frame++) {
+      for(int row=0; row<inAxisLen[1]; row++) {
+         for(int col=0; col<inAxisLen[0]; col++) {
+            //start = clock();
+            inIdx = frame*inAxisLen[2]*inAxisLen[1] + 
+                    row*inAxisLen[0] + col;
+            outIdx = col*outAxisLen[0]*outAxisLen[1] + 
+                     row*outAxisLen[0] + frame;
+            //end = clock();
+            //idxTime += (float)(end - start)/CLOCKS_PER_SEC;
+            
+            //start = clock();
+            mmappedOut[outIdx] = mmappedIn[inIdx]; 
+            //end = clock();
+            //assignTime += (float)(end - start)/CLOCKS_PER_SEC;
+         }      
+      }
+   }
+   end = clock();
+   rotTime = (float)(end - start)/CLOCKS_PER_SEC;
+   printf("INFO: Rotation time: %f seconds\n", rotTime);
+   //printf("INFO: Index time: %f seconds\n", idxTime);
+   //printf("INFO: Assign time: %f seconds\n", assignTime);
+   
+   /* Write the rotated array to disk */
+   start = clock();
+   fPixel[0] = fPixel[1] = fPixel[2] = 1;
+   fits_write_pix(out, TFLOAT, fPixel, nElements, 
+                 mmappedOut, &fitsStatus);
    if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
    end = clock();
    writeTime = (float)(end - start)/CLOCKS_PER_SEC;
-   printf("Write time: %0.2f seconds\n", writeTime);
-      
+   printf("INFO: Write time: %f seconds\n", writeTime);
+   
    /* Free the mapped memory */
-   start = clock();
-   status = 0;
-   status = munmap(mmappedData, mmapLen);
-   if(status < 0) {
-      close(fDescriptor);
+   statIn = statOut = 0;
+   statIn = munmap(mmappedIn,  mmapLen);
+   statOut= munmap(mmappedOut, mmapLen);
+   if((statIn < 0) || (statOut < 0)) {
+      close(fDescIn); close(fDescOut);
       printf("ERROR: Unable to free the memory map.\n");
       return(FAILURE);
    }
-   
    /* Close all open files */
-   close(fDescriptor);
-   remove(MMAP_FILE);
+   close(fDescIn); close(fDescOut);
+   remove(MMAP_FILE_IN);
+   remove(MMAP_FILE_OUT);
    fits_close_file(in, &fitsStatus);
    fits_close_file(out, &fitsStatus);
    if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
-   end = clock();
-   closeTime = (float)(end - start)/CLOCKS_PER_SEC;
-   printf("Close time: %0.2f seconds\n", closeTime);
    
    return(SUCCESS);
 }
