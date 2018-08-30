@@ -28,7 +28,7 @@ sarrvesh.ss@gmail.com
 #include "inputparser.h"
 
 #define FITS_STR "FITS"
-#define HDF5_STR "HDF5"
+#define HDF5_STR "HDFITS"
 
 /*************************************************************
 *

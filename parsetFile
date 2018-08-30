@@ -3,7 +3,7 @@
 nGPU = 1;
 
 // What is the input format? (not case-sensitive)
-// Can be "FITS" or "HDF5". 
+// Can be "FITS" or "HDFITS". 
 fileFormat = "FITS";
 
 // Define how fits files are stored on disk
