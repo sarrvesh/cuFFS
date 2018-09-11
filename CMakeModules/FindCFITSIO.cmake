@@ -26,6 +26,7 @@ else (CFITSIO_INCLUDE_DIR AND CFITSIO_LIBRARIES)
     PATH_SUFFIXES libcfitsio3 libcfitsio0 cfitsio
     PATHS
     $ENV{CFITSIO}
+    $ENV{CFITSIO}/include
     ${_obIncDir}
     ${GNUWIN32_DIR}/include
   )
@@ -33,6 +34,7 @@ else (CFITSIO_INCLUDE_DIR AND CFITSIO_LIBRARIES)
   find_library(CFITSIO_LIBRARIES NAMES cfitsio
     PATHS
     $ENV{CFITSIO}
+    $ENV{CFITSIO}/lib
     ${_obLinkDir}
     ${GNUWIN32_DIR}/lib
   )
