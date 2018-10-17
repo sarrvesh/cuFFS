@@ -50,3 +50,8 @@ gcc $C_FLAGS -c src/rotate/fitsrotate.c
 gcc $C_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rotate/transpose.c
 
 gcc $L_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ transpose.o fitsrotate.o -o fitsrot -lcfitsio -lm
+
+printf "compiling makecube.c\n"
+gcc $C_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/makecube/makecube.c
+
+gcc $L_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ makecube.o -o makecube -lcfitsio -lm
