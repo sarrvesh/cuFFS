@@ -3,34 +3,10 @@
 #include<time.h>
 #include<errno.h>
 #include<string.h>
-#include<stdbool.h>
+#include<glob.h>
 
 #include "constants.h"
 #include "fitsio.h"
-
-/*************************************************************
-*
-* For a given file pointer, return the number of lines in
-*   the file. Return FILE_ERROR on failure.
-*
-*************************************************************/
-int countLines(FILE *parset) {
-   int nLines = 0;
-   char ch;
-
-   while(!feof(parset)) {
-      ch = fgetc(parset);
-      if(ferror(parset) != SUCCESS) {
-         nLines = FILE_ERROR;
-         break;
-      }
-      if(ch == '\n') {
-         nLines += 1;
-      }
-   }
-
-   return(nLines);
-}
 
 /*************************************************************
 *
@@ -54,12 +30,11 @@ int checkFitsError(int status) {
 int main(int argc, char *argv[]) {
    clock_t startTime, endTime;
    float execTime;
-   char *inName = argv[1];
-   char *outName = argv[2];
-   FILE *parset;
-   char *fitsFileName = NULL;
-   char *tempFileName = NULL;
-   size_t lenFileName;
+   const char *inPattern = argv[1];
+   const char *outName = argv[2];
+   const char *freqFile = argv[3];
+   FILE *freqFileFd;
+   char fitsFileName[FILE_NAME_LEN];
    int nFitsFiles;
    fitsfile *in, *out;
    int fitsStatus=0;
@@ -68,12 +43,14 @@ int main(int argc, char *argv[]) {
    long fPixel[CUBE_DIM], oPixel[CUBE_DIM_OUT];
    long nElements;
    char fitsComment[FLEN_COMMENT];
-   bool isFirstImage;
    float *imageData;
+   float freqval;
    int thisChannel = 0;
    int nHeaderKeys = 0;
    char hdrKeyName[FLEN_COMMENT];
-   int i, leftover;
+   int i;
+   glob_t pglob;
+   
 
    /* Start the clock */
    startTime = 0;
@@ -84,51 +61,50 @@ int main(int argc, char *argv[]) {
    printf("Written by Sarrvesh S. Sridhar\n");
 
    /* Parse the command line input */
-   if((strcmp(inName, "-h") == 0) || (strcmp(inName, "--help") == 0)){
+   if((strcmp(inPattern, "-h") == 0) || (strcmp(inPattern, "--help") == 0)){
       /* Print help and exit */
       printf("Usage: %s <parset file> <output>\n\n", argv[0]);
       return(FAILURE);
    }
    if(argc!=NUM_INPUTS) {
       printf("ERROR: Invalid command line input. Terminating execution!\n");
-      printf("Usage: %s <parset file> <output>\n\n", argv[0]);
+      printf("Usage: %s <pattern for input> <output fits file> <output freq file>\n\n", argv[0]);
       return(FAILURE);
    }
 
-   /* Open the parset file. */
-   parset = fopen(inName, "r");
-   if(parset == NULL){
-      printf("\nError: Unable to read the input parset.\n");
-      printf("Error: %s\n\n", strerror(errno));
+   /* Find all files matching the input pattern */
+   if( glob(inPattern, GLOB_NOSORT, NULL, &pglob) != 0 ) {
+      printf("\nError: Unable to populate files matching the specified pattern\n\n");
       return(FAILURE);
    }
-   /* Estimate the number of input fits files */
-   nFitsFiles = countLines(parset);
-   printf("INFO: Found %d files in input file %s\n", nFitsFiles, inName);
+   else {
+      nFitsFiles = pglob.gl_pathc;
+   }
+   printf("\nINFO: Found %d fits files", nFitsFiles);
+
    /* Loop over each specified file */
-   rewind(parset);
-   isFirstImage = true;
-   while(getline(&tempFileName, &lenFileName, parset) > 0) {
-      fitsFileName = strtok(tempFileName, "\n");
+   for(thisChannel=0; thisChannel < nFitsFiles; thisChannel++) {
+      strcpy(fitsFileName, pglob.gl_pathv[thisChannel]);
+      //fitsFileName = pglob.gl_pathv[thisChannel];
       printf("\nProcessing file %s", fitsFileName);
       /* Open this fits file */
       fits_open_file(&in, fitsFileName, READONLY, &fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
       /* Read the size of the input cube */
       inAxisLen[0] = inAxisLen[1] = inAxisLen[2] = inAxisLen[3] = 0;
-      fits_read_key(in, TINT, "NAXIS1", &inAxisLen[0], fitsComment, &fitsStatus);
-      fits_read_key(in, TINT, "NAXIS2", &inAxisLen[1], fitsComment, &fitsStatus);
-      fits_read_key(in, TINT, "NAXIS3", &inAxisLen[2], fitsComment, &fitsStatus);
-      fits_read_key(in, TINT, "NAXIS4", &inAxisLen[3], fitsComment, &fitsStatus);
+      fits_read_key(in, TINT, "NAXIS1", &inAxisLen[0], fitsComment,&fitsStatus);
+      fits_read_key(in, TINT, "NAXIS2", &inAxisLen[1], fitsComment,&fitsStatus);
+      fits_read_key(in, TINT, "NAXIS3", &inAxisLen[2], fitsComment,&fitsStatus);
+      fits_read_key(in, TINT, "NAXIS4", &inAxisLen[3], fitsComment,&fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
       /* Check if all input images have the same size */
-      if(isFirstImage == true) {
+      if(thisChannel == 0) {
          axisLen[0] = inAxisLen[0];
          axisLen[1] = inAxisLen[1];
          axisLen[2] = inAxisLen[2];
          axisLen[3] = inAxisLen[3];
          nElements = axisLen[0] * axisLen[1] * axisLen[2] * axisLen[3];
-         isFirstImage = false;
+         imageData = calloc(nElements, sizeof(float));
 
          /* While we are at it, create the output file */
          outAxisLen[0] = inAxisLen[0];
@@ -141,11 +117,11 @@ int main(int argc, char *argv[]) {
          fits_get_hdrspace(in, &nHeaderKeys, NULL, &fitsStatus);
          for(i=0; i<nHeaderKeys; i++) {
             fits_read_record(in, i+1, hdrKeyName, &fitsStatus);
-            /* Ignore this record if it contains the keys SIMPLE, BITPIX, NAXIS, 
-               NAXIS1, NAXIS2, NAXIS3, and EXTEND */
+            /* Ignore this record if it contains the keys SIMPLE, 
+               BITPIX, NAXIS, NAXIS1, NAXIS2, NAXIS3, and EXTEND */
             if(strstr(hdrKeyName, "SIMPLE")!=NULL ||
                strstr(hdrKeyName, "BITPIX")!=NULL ||
-               strstr(hdrKeyName, "NAXIS")!=NULL ||
+               strstr(hdrKeyName, "NAXIS") !=NULL ||
                strstr(hdrKeyName, "NAXIS1")!=NULL ||
                strstr(hdrKeyName, "NAXIS2")!=NULL ||
                strstr(hdrKeyName, "NAXIS3")!=NULL ||
@@ -155,6 +131,12 @@ int main(int argc, char *argv[]) {
             }
          }
          if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
+         /* Open the freq files to write frequencies */
+         freqFileFd = fopen(freqFile, "w+");
+         if(freqFileFd == NULL) {
+            printf("\nError: Unable to create the frequency file\n\n");
+            return(FAILURE);
+         }
       }
       else {
          if((axisLen[0] != inAxisLen[0]) || 
@@ -165,8 +147,11 @@ int main(int argc, char *argv[]) {
                     fitsFileName);
          }
       }
+      /* Read the frequency information from the fits header */
+      fits_read_key(in, TFLOAT, "CRVAL3", &freqval, fitsComment, &fitsStatus);
+      fprintf(freqFileFd, "%f\n", freqval);
+      /* Read the image data */
       fPixel[0] = fPixel[1] = fPixel[2] = fPixel[3] = 1;
-      imageData = calloc(nElements, sizeof(float));
       fits_read_pix(in, TFLOAT, fPixel, nElements, 
                     NULL, imageData, NULL, &fitsStatus);
       fits_close_file(in, &fitsStatus);
@@ -174,10 +159,10 @@ int main(int argc, char *argv[]) {
       oPixel[2] = thisChannel + 1;
       fits_write_pix(out, TFLOAT, oPixel, nElements, imageData, &fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
-      thisChannel += 1;
    }
-   free(fitsFileName);
-   fclose(parset);
+   free(imageData);
+   fclose(freqFileFd);
+   //globfree(&pglob);
    fits_close_file(out, &fitsStatus);
    if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
 
