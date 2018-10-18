@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
    /* Parse the command line input */
    if((strcmp(inPattern, "-h") == 0) || (strcmp(inPattern, "--help") == 0)){
       /* Print help and exit */
-      printf("Usage: %s <parset file> <output>\n\n", argv[0]);
+      printf("Usage: %s <pattern for input> <output fits file> <output freq file>\n\n", argv[0]);
       return(FAILURE);
    }
    if(argc!=NUM_INPUTS) {
