@@ -1,7 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
-#include<errno.h>
 #include<string.h>
 #include<glob.h>
 
@@ -85,11 +84,12 @@ int main(int argc, char *argv[]) {
    /* Loop over each specified file */
    for(thisChannel=0; thisChannel < nFitsFiles; thisChannel++) {
       strcpy(fitsFileName, pglob.gl_pathv[thisChannel]);
-      //fitsFileName = pglob.gl_pathv[thisChannel];
       printf("\nProcessing file %s", fitsFileName);
+      
       /* Open this fits file */
       fits_open_file(&in, fitsFileName, READONLY, &fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
+      
       /* Read the size of the input cube */
       inAxisLen[0] = inAxisLen[1] = inAxisLen[2] = inAxisLen[3] = 0;
       fits_read_key(in, TINT, "NAXIS1", &inAxisLen[0], fitsComment,&fitsStatus);
@@ -97,7 +97,12 @@ int main(int argc, char *argv[]) {
       fits_read_key(in, TINT, "NAXIS3", &inAxisLen[2], fitsComment,&fitsStatus);
       fits_read_key(in, TINT, "NAXIS4", &inAxisLen[3], fitsComment,&fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
-      /* Check if all input images have the same size */
+      
+      /* If this is the first first image, do 
+         * store the dimensions of the image so that we can check later
+         * allocate memory to store image data
+         * create the output fits cube 
+         * create the output frequency file */
       if(thisChannel == 0) {
          axisLen[0] = inAxisLen[0];
          axisLen[1] = inAxisLen[1];
@@ -113,6 +118,7 @@ int main(int argc, char *argv[]) {
          fits_create_file(&out, outName, &fitsStatus);
          fits_create_img(out, FLOAT_IMG, CUBE_DIM_OUT, outAxisLen, &fitsStatus);
          oPixel[0] = oPixel[1] = 1;
+
          /* Copy FITS keywords from input image to output cube */
          fits_get_hdrspace(in, &nHeaderKeys, NULL, &fitsStatus);
          for(i=0; i<nHeaderKeys; i++) {
@@ -129,40 +135,47 @@ int main(int argc, char *argv[]) {
             else {
                fits_write_record(out, hdrKeyName, &fitsStatus);
             }
-         }
+         } /* end of for loop */
          if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
+
          /* Open the freq files to write frequencies */
          freqFileFd = fopen(freqFile, "w+");
          if(freqFileFd == NULL) {
             printf("\nError: Unable to create the frequency file\n\n");
             return(FAILURE);
          }
-      }
+
+      } /* end of if (line 106) */
       else {
          if((axisLen[0] != inAxisLen[0]) || 
             (axisLen[1] != inAxisLen[1]) || 
             (axisLen[2] != inAxisLen[2]) || 
             (axisLen[3] != inAxisLen[3])) {
-            printf("\nError: Input cube %s has different dimensions\n", 
-                    fitsFileName);
+               printf("\nError: Input cube %s has different dimensions\n", 
+                      fitsFileName);
          }
-      }
+      } /* end of else */
+
       /* Read the frequency information from the fits header */
       fits_read_key(in, TFLOAT, "CRVAL3", &freqval, fitsComment, &fitsStatus);
       fprintf(freqFileFd, "%f\n", freqval);
+
       /* Read the image data */
       fPixel[0] = fPixel[1] = fPixel[2] = fPixel[3] = 1;
       fits_read_pix(in, TFLOAT, fPixel, nElements, 
                     NULL, imageData, NULL, &fitsStatus);
       fits_close_file(in, &fitsStatus);
+
       /* Write the read image as a channel to the out cube */
       oPixel[2] = thisChannel + 1;
       fits_write_pix(out, TFLOAT, oPixel, nElements, imageData, &fitsStatus);
       if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
-   }
+
+   } /* end of for loop (line 85) */
+   
+   /* Free remaining open allocations */
    free(imageData);
    fclose(freqFileFd);
-   //globfree(&pglob);
    fits_close_file(out, &fitsStatus);
    if(fitsStatus != SUCCESS) { return(checkFitsError(fitsStatus)); }
 
@@ -170,7 +183,7 @@ int main(int argc, char *argv[]) {
    endTime = 0;
    endTime = clock();
 
-   /* Report execution time */
+   /* Report execution time and exit */
    execTime = (float)(endTime - startTime)/CLOCKS_PER_SEC;
    printf("\nINFO: Total execution time: %0.2f seconds\n\n", execTime);
    return(SUCCESS);
