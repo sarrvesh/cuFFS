@@ -55,3 +55,8 @@ printf "compiling makecube.c\n"
 gcc $C_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/makecube/makecube.c
 
 gcc $L_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ makecube.o -o makecube -lcfitsio -lm
+
+printf "compiling Faraday synthesis\n"
+gcc $C_FLAGS -c src/synthesis/synthesis.c
+gcc $C_FLAGS -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -c src/synthesis/synth_fileaccess.c
+gcc $L_FLAGS -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ synthesis.o synth_fileaccess.o -o synthesis -lconfig
