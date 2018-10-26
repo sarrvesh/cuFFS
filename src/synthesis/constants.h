@@ -11,4 +11,16 @@
 #define SUCCESS 0
 #define FAILURE 1
 
+#define SEC_PER_HOUR 3600
+#define SEC_PER_MIN  60
+
+#define LINEAR 9
+
+#define kHz 1000.
+
+#define CPU 1
+#define GPU 2
+#define FFT 3
+#define DFT 4
+
 #endif

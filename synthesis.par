@@ -1,2 +1,24 @@
 // Specify the name of the measurement set
-ms = "sample_name";
+ms = "/home/sarrvesh/Work/cuFFS/synth_test/3C295_1spw.ms";
+
+// Specify the uv range (in m) to image.
+// If these are not mentioned, all visibilities will be included.
+uvmin = 0;
+uvmax = 2000;
+
+// Specify the image size in pixels 
+// At the moment, only square images are supported
+imsize = 10;
+
+// Specify cellsize in arcsec
+cellsize = 2.;
+
+// Specify which hardware to use 
+// Can be cpu or gpu (case-insensitive)
+// Default: cpu
+hardware = "cpu";
+
+// Specify the inversion mode
+// can be dft or fft (case-insensitive)
+// Default: dft
+invertmode = "dft";

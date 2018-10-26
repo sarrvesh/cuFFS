@@ -6,6 +6,8 @@ CFITSIO_PATH="/home/sarrvesh/Documents/cfitsio"
 CUDA_PATH="/home/sarrvesh/Documents/cuda"
 #Rootdir of HDF5
 HDF5_PATH="/home/sarrvesh/Documents/hdf5"
+#Rootdir for casacore
+CASA_PATH="/home/sarrvesh/Documents/casacore"
 # NVCC flags
 NVCC_FLAGS=arch=compute_50,code=sm_50
 
@@ -28,35 +30,8 @@ else
     printf "Compiling with Gnuplot\n"
 fi
 
-printf "Compiling devices.cu\n"
-nvcc -O3 -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -c src/rmsynthesis/devices.cu -lhdf5 -gencode $NVCC_FLAGS
-
-printf "Compiling fileaccess.c\n"
-gcc -Wno-unused-result $GCC_FLAGS -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -L${HDF5_PATH}/lib/ -c src/rmsynthesis/fileaccess.c -lhdf5 -lhdf5_hl
-
-printf "Compiling inputparser.c\n"
-gcc $GCC_FLAGS -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -I${HDF5_PATH}/include/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/rmsynthesis/inputparser.c
-
-printf "Compiling rmsf.c\n"
-gcc $GCC_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -I${HDF5_PATH}/include/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/rmsynthesis/rmsf.c
-
-#printf "Compiling rmsynthesis.c\n"
-gcc -DMACRO $GCC_FLAGS -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${HDF5_PATH}/lib/ -lhdf5 -lhdf5_hl -c src/rmsynthesis/rmsynthesis.c
-
-nvcc -O3 -I${CUDA_PATH}/include/ -I${LIB_CONFIG_PATH}/include/ -I${CFITSIO_PATH}/include/ -I${HDF5_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -L/${CFITSIO_PATH}/lib/ -L${CUDA_PATH}/lib64/ -L${HDF5_PATH}/lib/ -o rmsynthesis rmsynthesis.o devices.o fileaccess.o inputparser.o rmsf.o -lconfig -lcfitsio -lcudart -lm -lhdf5 -lhdf5_hl -gencode $NVCC_FLAGS
-
-printf "compiling rotate.c\n"
-gcc $C_FLAGS -c src/rotate/fitsrotate.c
-gcc $C_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/rotate/transpose.c
-
-gcc $L_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ transpose.o fitsrotate.o -o fitsrot -lcfitsio -lm
-
-printf "compiling makecube.c\n"
-gcc $C_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ -c src/makecube/makecube.c
-
-gcc $L_FLAGS -I${CFITSIO_PATH}/include/ -L/${CFITSIO_PATH}/lib/ makecube.o -o makecube -lcfitsio -lm
-
 printf "compiling Faraday synthesis\n"
-gcc $C_FLAGS -c src/synthesis/synthesis.c
-gcc $C_FLAGS -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -c src/synthesis/synth_fileaccess.c
-gcc $L_FLAGS -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ synthesis.o synth_fileaccess.o -o synthesis -lconfig
+g++ -std=c++11 -c src/synthesis/synthesis.cpp
+g++ -std=c++11 -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -c src/synthesis/synth_fileaccess.cpp
+g++ -std=c++11 -O3 -I${CASA_PATH}/include -L${CASA_PATH}/lib -c src/synthesis/ms_access.cpp
+g++ -std=c++11 -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -I${CASA_PATH}/include -L${CASA_PATH}/lib64 -o synthesis synthesis.o synth_fileaccess.o ms_access.o -lconfig -lcasa_ms -lcasa_casa -lcasa_tables -lcasa_measures

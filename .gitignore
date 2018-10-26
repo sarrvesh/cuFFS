@@ -28,9 +28,11 @@
 *.x86_64
 *.hex
 ./rmsynthesis
+./synthesis
 
 # Debug files
 *.dSYM/
 
 # User defined 
 test*
+synth_test

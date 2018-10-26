@@ -1,9 +1,11 @@
 #include<stdio.h>
 #include<time.h>
 #include<string.h>
+#include<stdlib.h>
 
 #include "constants.h"
 #include "synth_fileaccess.h"
+#include "ms_access.h"
 
 /*************************************************************
 *
@@ -12,8 +14,11 @@
 *************************************************************/
 int main(int argc, char *argv[]) {
    char *parsetFileName = argv[1];
-   clock_t startTime;
+   clock_t startTime, endTime;
    struct optionsList inOptions;
+   struct structHeader msHeader;
+   unsigned int hours, mins, secs;
+   unsigned int elapsedTime;
    
    /* Start the clock */
    startTime = clock();
@@ -37,7 +42,23 @@ int main(int argc, char *argv[]) {
    /* Parse the input file */
    printf("INFO: Parsing parset file %s\n", parsetFileName);
    inOptions = parseInput(parsetFileName);
-   printf("INFO: Specified MS is %s\n", inOptions.msName);
+   
+   /* Get header information from the measurement set */
+   if(FAILURE == getMsHeader(inOptions, &msHeader)) { exit(FAILURE); }
+
+   /* Find the minimum and maximum baselines */
+   if(FAILURE == getUvRange(inOptions, &msHeader)) { exit(FAILURE); }   
+   
+   /* Print some useful information */ 
+   printUserInfo(inOptions, msHeader);
+   
+   /* Report execution time */
+   endTime = clock();
+   elapsedTime = (unsigned int)(endTime - startTime)/CLOCKS_PER_SEC;
+   hours = (unsigned int)elapsedTime/SEC_PER_HOUR;
+   mins  = (unsigned int)(elapsedTime%SEC_PER_HOUR)/SEC_PER_MIN;
+   secs  = (unsigned int)(elapsedTime%SEC_PER_HOUR)%SEC_PER_MIN;
+   printf("INFO: Total execution time: %d:%d:%d\n", hours, mins, secs);
    
    printf("\n");
    return(SUCCESS);
