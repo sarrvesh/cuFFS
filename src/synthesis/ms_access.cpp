@@ -6,12 +6,63 @@
 #include<stdio.h>
 #include<string>
 #include<assert.h>
+#include<math.h>
 
 #include "ms_access.h"
 #include "constants.h"
 
 using namespace casacore;
 
+/*************************************************************
+*
+* Compute the image by inverting the visibilities using DFT
+*
+*************************************************************/
+void computeImageDFT(struct optionsList inOptions, 
+                     struct structHeader msHeader, 
+                     double lArray[], double mArray[], double imageData[]) {
+   Array<Complex> rowData;
+   Array<Bool> flags;
+   float xx, xy, yx, yy;
+   float vi, vq, vu;
+   Array<std::complex<float> >::contiter rowDataIter;
+   Bool flagrow;
+   
+   MeasurementSet ms(inOptions.msName, Table::Old);
+   
+   /* Get access to the DATA */
+   ArrayColumn<Complex> dataCol(ms, "DATA");
+   
+   /* Get access to the flag and flag row column*/
+   ROScalarColumn<Bool> flagrowCol(ms, "FLAG_ROW");
+   ArrayColumn<Bool> flagCol(ms, "FLAG");
+   
+   /* Read in each row */
+   for(size_t thisRow=0; thisRow<msHeader.nVisRows; ++thisRow) {
+      flagrow = flagrowCol.get(thisRow);
+      if(flagrow) { continue; }
+      
+      flags = flagCol.get(thisRow);
+      if(flags[0].cbegin()[0] == 1) { continue; }
+      
+      rowData = dataCol.get(thisRow);
+      rowDataIter = rowData[0].cbegin(); // 0 here represents the channel
+      xx = rowDataIter[0].real();
+      xy = rowDataIter[1].real();
+      yx = rowDataIter[2].real();
+      yy = rowDataIter[3].real();
+      vi = 0.5 * (xx + yy);
+      vq = 0.5 * (xx - yy);
+      vu = 0.5 * (xy + yx);
+      break;
+   }
+}
+
+/*************************************************************
+*
+* Compute the image by inverting the visibilities using DFT
+*
+*************************************************************/
 int getUvRange(struct optionsList inOptions, struct structHeader *msHeader) {
    double uInM, vInM, wInM;
    
@@ -98,6 +149,12 @@ int getMsHeader(struct optionsList inOptions, struct structHeader *msHeader) {
       msHeader->pointRa = refCoord.getValue()[0];
       msHeader->pointDec= refCoord.getValue()[1];
       msHeader->coordStr = refDir.toString();
+      /* Compute the coordinate of the pixel (0,0) */
+      msHeader->cdelt = (inOptions.cellsize/3600)*(M_PI/180);
+      msHeader->firstRa = msHeader->pointRa + 
+                          (inOptions.imsize/2) * msHeader->cdelt;
+      msHeader->firstDec= msHeader->pointDec + 
+                          (inOptions.imsize/2) * msHeader->cdelt;
       
       /* Check what type of feeds were used */
       MSPolarization polCol = ms.polarization();

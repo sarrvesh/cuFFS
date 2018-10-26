@@ -11,6 +11,11 @@
 #include "constants.h"
 #include "ms_access.h"
 
+/*************************************************************
+*
+* Print useful input/output information 
+*
+*************************************************************/
 void printUserInfo(struct optionsList inOptions, 
                    struct structHeader msHeader) {
    printf("\n*************************\n\n");

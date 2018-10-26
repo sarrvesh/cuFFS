@@ -31,7 +31,8 @@ else
 fi
 
 printf "compiling Faraday synthesis\n"
-g++ -std=c++11 -c src/synthesis/synthesis.cpp
+g++ -std=c++11 -O3 -c src/synthesis/synthesis.cpp
 g++ -std=c++11 -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -c src/synthesis/synth_fileaccess.cpp
 g++ -std=c++11 -O3 -I${CASA_PATH}/include -L${CASA_PATH}/lib -c src/synthesis/ms_access.cpp
-g++ -std=c++11 -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -I${CASA_PATH}/include -L${CASA_PATH}/lib64 -o synthesis synthesis.o synth_fileaccess.o ms_access.o -lconfig -lcasa_ms -lcasa_casa -lcasa_tables -lcasa_measures
+g++ -std=c++11 -O3 -c src/synthesis/prepare_grid.cpp
+g++ -std=c++11 -I${LIB_CONFIG_PATH}/include/ -L${LIB_CONFIG_PATH}/lib/ -I${CASA_PATH}/include -L${CASA_PATH}/lib64 -o synthesis synthesis.o synth_fileaccess.o ms_access.o prepare_grid.o -lconfig -lcasa_ms -lcasa_casa -lcasa_tables -lcasa_measures -lm

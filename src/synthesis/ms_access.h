@@ -12,13 +12,18 @@ struct structHeader {
    size_t nVisRows;
    double uMaxM, uMinM, vMaxM, vMinM, wMaxM, wMinM;
    double maxUVWm, minUVWm;
-   double pointRa, pointDec;
-   double pointRaDeg, pointDecDeg;
+   double pointRa, pointDec;        // Coord of reference pixel in rad
+   double pointRaDeg, pointDecDeg;  // Coord of reference pixel in deg
+   double firstRa, firstDec;        // Coord of pixel (0,0) in rad
+   double cdelt;                    // cellsize in radians
    std::string coordStr;
    int corrType;
 };
 
 int getMsHeader(struct optionsList inOptions, struct structHeader *msHeader); 
 int getUvRange(struct optionsList inOptions, struct structHeader *msHeader);
+void computeImageDFT(struct optionsList inOptions, 
+                     struct structHeader msHeader, 
+                     double lArray[], double mArray[], double imageArray[]);
 
 #endif

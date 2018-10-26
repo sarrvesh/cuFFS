@@ -2,10 +2,14 @@
 #include<time.h>
 #include<string.h>
 #include<stdlib.h>
+#include<stdexcept>
 
 #include "constants.h"
 #include "synth_fileaccess.h"
 #include "ms_access.h"
+#include "prepare_grid.h"
+
+#include<iostream>
 
 /*************************************************************
 *
@@ -19,6 +23,8 @@ int main(int argc, char *argv[]) {
    struct structHeader msHeader;
    unsigned int hours, mins, secs;
    unsigned int elapsedTime;
+   size_t nPixels;
+   double *imageData, *lArray, *mArray;
    
    /* Start the clock */
    startTime = clock();
@@ -51,6 +57,21 @@ int main(int argc, char *argv[]) {
    
    /* Print some useful information */ 
    printUserInfo(inOptions, msHeader);
+   
+   /* Find the angular coordinates of pixel (0,0) in the image */
+   
+   /* Allocate arrays for the output image */
+   nPixels = inOptions.imsize * inOptions.imsize;
+   imageData = (double *)calloc(nPixels, sizeof(double));
+   lArray    = (double *)calloc(nPixels, sizeof(double));
+   mArray    = (double *)calloc(nPixels, sizeof(double));
+   if((imageData == NULL) || (lArray == NULL) || (mArray == NULL)) {
+      throw std::runtime_error("Unable to allocate memory\n");
+   }
+   computeLMGrid(inOptions, msHeader, lArray, mArray);
+   
+   /* Do DFT and generate the output image */
+   computeImageDFT(inOptions, msHeader, lArray, mArray, imageData);
    
    /* Report execution time */
    endTime = clock();
