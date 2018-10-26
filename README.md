@@ -12,6 +12,7 @@ Dependencies
 * [gnuplot](http://www.gnuplot.info/) (Optional)
 * [nvcc](docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/) (Need both the driver and the toolkit)
 * [hdf5](https://support.hdfgroup.org/HDF5/)
+* [casacore](https://github.com/casacore/casacore) (built with C++11)
 
 Installation
 ============
