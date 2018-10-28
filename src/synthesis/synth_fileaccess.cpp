@@ -14,7 +14,6 @@
 
 #define outName "./sample.fits"
 #define NAXIS 3
-#define FLEN_COMMENTS 256
 
 /*************************************************************
 *
@@ -58,7 +57,6 @@ void writeOutputImages(struct optionsList inOptions,
    size_t nElements = inOptions.imsize * inOptions.imsize;
    long axisLen[NAXIS];
    long oPixel[NAXIS];
-   char fitsComment[FLEN_COMMENT];
    char ctype1[] = "RA--SIN";
    char ctype2[] = "DEC--SIN";
    char ctype3[] = "FREQ";
