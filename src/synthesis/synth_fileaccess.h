@@ -14,5 +14,8 @@ struct optionsList {
 struct optionsList parseInput(char *parsetFileName);
 void printUserInfo(struct optionsList inOptions, 
                    struct structHeader msHeader);
+void writeOutputImages(struct optionsList inOptions,
+                       struct structHeader msHeader,
+                       float imageData[]);
 
 #endif

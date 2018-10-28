@@ -2,14 +2,106 @@
 #include<stdlib.h>
 #include<string.h>
 #include<stdexcept>
-#include<cassert>
 #include<limits>
 #include<libconfig.h>
 #include<iostream>
+#include<fitsio.h>
+#include<math.h>
 
 #include "synth_fileaccess.h"
 #include "constants.h"
 #include "ms_access.h"
+
+#define outName "./sample.fits"
+#define NAXIS 3
+#define FLEN_COMMENTS 256
+
+void checkFitsError(int fitsStatus) {
+   if(fitsStatus) {
+      fits_report_error(stdout, fitsStatus);
+      throw std::runtime_error("\n");
+   }
+}
+
+/*************************************************************
+*
+* Write the specified output image to disk
+*
+*************************************************************/
+void writeOutputImages(struct optionsList inOptions,
+                       struct structHeader msHeader,
+                       float imageData[]) {
+   fitsfile *out;
+   int fitsStatus = 0;
+   size_t nElements = inOptions.imsize * inOptions.imsize;
+   long axisLen[NAXIS];
+   long oPixel[NAXIS];
+   char fitsComment[FLEN_COMMENT];
+   char ctype1[] = "RA--SIN";
+   char ctype2[] = "DEC--SIN";
+   char ctype3[] = "FREQ";
+   char unitDeg[] = "deg";
+   char unitHz[] = "Hz";
+   char unitJy[] = "JY/BEAM";
+   char bType[] = "Intensity";
+   double equinox = 2000.0;
+   double cdelt1, cdelt2, cdelt3;
+   int crpix1, crpix2, crpix3;
+   
+   imageData[1] = 4.;
+   
+   /* Create the output file */
+   fits_create_file(&out, outName, &fitsStatus);
+   axisLen[0] = inOptions.imsize;
+   axisLen[1] = inOptions.imsize;
+   axisLen[2] = 1;
+   fits_create_img(out, FLOAT_IMG, NAXIS, axisLen, &fitsStatus);
+   oPixel[0] = oPixel[1] = oPixel[2] = 1;
+   
+   /* Write the output pixels */
+   fits_write_pix(out, TFLOAT, oPixel, nElements, imageData, &fitsStatus);
+   
+   /* Set the appropriate header information */
+   fits_write_key(out, TSTRING, "BUNIT", unitJy, "", &fitsStatus);
+   fits_write_key(out, TSTRING, "BTYPE", bType, "", &fitsStatus);
+   
+   fits_write_key(out, TSTRING, "CTYPE1", ctype1, "", &fitsStatus);
+   fits_write_key(out, TDOUBLE, "CRVAL1", &(msHeader.pointRaDeg), 
+                  "", &fitsStatus);
+   cdelt1 = -msHeader.cdelt*(180.0/M_PI);
+   fits_write_key(out, TDOUBLE, "CDELT1", &cdelt1, "", &fitsStatus);
+   crpix1 = (inOptions.imsize/2)+1;
+   fits_write_key(out, TINT, "CRPIX1", &crpix1, "", &fitsStatus);
+   fits_write_key(out, TSTRING, "CUNIT1", unitDeg, "", &fitsStatus);
+   
+   fits_write_key(out, TSTRING, "CTYPE2", ctype2, "", &fitsStatus);
+   fits_write_key(out, TDOUBLE, "CRVAL2", &(msHeader.pointDecDeg), 
+                  "", &fitsStatus);
+   cdelt2 = msHeader.cdelt*(180.0/M_PI);
+   fits_write_key(out, TDOUBLE, "CDELT2", &cdelt2, "", &fitsStatus);
+   crpix2 = (inOptions.imsize/2)+1;
+   fits_write_key(out, TINT, "CRPIX2", &crpix2, "", &fitsStatus);
+   fits_write_key(out, TSTRING, "CUNIT2", unitDeg, "", &fitsStatus);
+   
+   fits_write_key(out, TSTRING, "CTYPE3", ctype3, "Central Frequency",
+                  &fitsStatus);
+   fits_write_key(out, TDOUBLE, "CRVAL3", &(msHeader.chanFreq[0]), 
+                  "", &fitsStatus);
+   cdelt3 = msHeader.chanFreq[1] - msHeader.chanFreq[0];
+   fits_write_key(out, TDOUBLE, "CDELT3", &cdelt3, "", &fitsStatus);
+   crpix3 = 1;
+   fits_write_key(out, TINT, "CRPIX3", &crpix3, "", &fitsStatus);
+   fits_write_key(out, TSTRING, "CUNIT3", unitHz, "", &fitsStatus);
+   fits_write_key(out, TDOUBLE, "EQUINOX", &equinox, "J2000.0", &fitsStatus);
+   fits_write_key(out, TSTRING, "ORIGIN", (char*) MY_NAME, 
+                  "Faraday synthesis written by Sarrvesh Sridhar",
+                  &fitsStatus);
+                  
+   // TODO: Write the observation date to fits header
+   
+   fits_close_file(out, &fitsStatus);
+   checkFitsError(fitsStatus);
+}
 
 /*************************************************************
 *
@@ -25,6 +117,8 @@ void printUserInfo(struct optionsList inOptions,
    printf("Channel width:%0.4f kHz\n", msHeader.chanWidth/kHz);
    std::cout << "Phase center: " << msHeader.coordStr << std::endl;
    printf("UV range: %0.2f - %0.2f m\n", msHeader.minUVWm, msHeader.maxUVWm);
+   printf("U range: %0.2f - %0.2f m\n", msHeader.uMinM, msHeader.uMaxM);
+   printf("V range: %0.2f - %0.2f m\n", msHeader.vMinM, msHeader.vMaxM);
    printf("Output image size: %d x %d\n", inOptions.imsize, inOptions.imsize);
    printf("Pixel size: %0.1f x %0.1f\n", inOptions.cellsize, 
                                          inOptions.cellsize);

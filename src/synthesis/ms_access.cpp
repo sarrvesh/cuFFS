@@ -20,12 +20,13 @@ using namespace casacore;
 *************************************************************/
 void computeImageDFT(struct optionsList inOptions, 
                      struct structHeader msHeader, 
-                     double lArray[], double mArray[], double imageData[]) {
+                     double lArray[], double mArray[], float imageData[]) {
    Array<Complex> rowData;
    Array<Bool> flags;
    float xx, xy, yx, yy;
    float vi, vq, vu;
    Array<std::complex<float> >::contiter rowDataIter;
+   Array<Bool>::contiter flagIter;
    Bool flagrow;
    
    MeasurementSet ms(inOptions.msName, Table::Old);
@@ -43,7 +44,8 @@ void computeImageDFT(struct optionsList inOptions,
       if(flagrow) { continue; }
       
       flags = flagCol.get(thisRow);
-      if(flags[0].cbegin()[0] == 1) { continue; }
+      flagIter = flags[0].cbegin();      // 0 here represents the channel
+      if(flagIter[0] == 1) { continue; } // 0 here represents XX
       
       rowData = dataCol.get(thisRow);
       rowDataIter = rowData[0].cbegin(); // 0 here represents the channel
@@ -54,7 +56,7 @@ void computeImageDFT(struct optionsList inOptions,
       vi = 0.5 * (xx + yy);
       vq = 0.5 * (xx - yy);
       vu = 0.5 * (xy + yx);
-      break;
+      //break;
    }
 }
 
@@ -97,6 +99,11 @@ int getUvRange(struct optionsList inOptions, struct structHeader *msHeader) {
    return(SUCCESS);
 }
 
+/*************************************************************
+*
+* Get useful information from the MS
+*
+*************************************************************/
 int getMsHeader(struct optionsList inOptions, struct structHeader *msHeader) {
    try {
       MeasurementSet ms(inOptions.msName, Table::Old);
@@ -149,6 +156,9 @@ int getMsHeader(struct optionsList inOptions, struct structHeader *msHeader) {
       msHeader->pointRa = refCoord.getValue()[0];
       msHeader->pointDec= refCoord.getValue()[1];
       msHeader->coordStr = refDir.toString();
+      // TODO: Convert pointRa, pointDec to pointRaDeg and pointDecDeg
+      msHeader->pointRaDeg = msHeader->pointRa*(180.0/M_PI);
+      msHeader->pointDecDeg= msHeader->pointDec*(180.0/M_PI);
       /* Compute the coordinate of the pixel (0,0) */
       msHeader->cdelt = (inOptions.cellsize/3600)*(M_PI/180);
       msHeader->firstRa = msHeader->pointRa + 

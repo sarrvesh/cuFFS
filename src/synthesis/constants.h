@@ -1,6 +1,7 @@
 #ifndef SYNTHESIS_CONSTANTS_H
 #define SYNTHESIS_CONSTANTS_H
 
+#define MY_NAME "cuFFS synthesis"
 #define VERSION_STR "0.1"
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1

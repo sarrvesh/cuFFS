@@ -24,9 +24,10 @@ int main(int argc, char *argv[]) {
    unsigned int hours, mins, secs;
    unsigned int elapsedTime;
    size_t nPixels;
-   double *imageData, *lArray, *mArray;
+   float *imageData;
+   double *lArray, *mArray;
    
-   /* Start the clock */
+   /* Start the clock /
    startTime = clock();
    
    printf("\n");
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
    
    /* Allocate arrays for the output image */
    nPixels = inOptions.imsize * inOptions.imsize;
-   imageData = (double *)calloc(nPixels, sizeof(double));
+   imageData = (float *)calloc(nPixels, sizeof(float));
    lArray    = (double *)calloc(nPixels, sizeof(double));
    mArray    = (double *)calloc(nPixels, sizeof(double));
    if((imageData == NULL) || (lArray == NULL) || (mArray == NULL)) {
@@ -72,6 +73,9 @@ int main(int argc, char *argv[]) {
    
    /* Do DFT and generate the output image */
    computeImageDFT(inOptions, msHeader, lArray, mArray, imageData);
+   
+   /* Write image to disk */
+   writeOutputImages(inOptions, msHeader, imageData);
    
    /* Report execution time */
    endTime = clock();

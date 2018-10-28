@@ -24,6 +24,6 @@ int getMsHeader(struct optionsList inOptions, struct structHeader *msHeader);
 int getUvRange(struct optionsList inOptions, struct structHeader *msHeader);
 void computeImageDFT(struct optionsList inOptions, 
                      struct structHeader msHeader, 
-                     double lArray[], double mArray[], double imageArray[]);
+                     double lArray[], double mArray[], float imageArray[]);
 
 #endif

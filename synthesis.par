@@ -8,7 +8,7 @@ uvmax = 2000;
 
 // Specify the image size in pixels 
 // At the moment, only square images are supported
-imsize = 10;
+imsize = 4;
 
 // Specify cellsize in arcsec
 cellsize = 2.;
