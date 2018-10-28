@@ -16,10 +16,32 @@
 #define NAXIS 3
 #define FLEN_COMMENTS 256
 
+/*************************************************************
+*
+* Check fits status and throw an exception if required.
+*
+*************************************************************/
 void checkFitsError(int fitsStatus) {
    if(fitsStatus) {
       fits_report_error(stdout, fitsStatus);
       throw std::runtime_error("\n");
+   }
+}
+
+/*************************************************************
+*
+* Check if the input MS is regular in freq
+*
+*************************************************************/
+void isMsContinuous(double chanFreq[], size_t chanPerSPW) {
+   if(chanPerSPW > 1) {
+      double diff = chanFreq[1] - chanFreq[0];
+      for(size_t chan=1; chan<chanPerSPW; ++chan) {
+         if((chanFreq[chan] - chanFreq[chan-1]) != diff) {
+            printf("WARN: MS is not continuous in frequency.\n");
+            printf("WARN: AXIS3 in Stokes I will not be regular.\n");
+         }
+      }
    }
 }
 
@@ -83,6 +105,7 @@ void writeOutputImages(struct optionsList inOptions,
    fits_write_key(out, TINT, "CRPIX2", &crpix2, "", &fitsStatus);
    fits_write_key(out, TSTRING, "CUNIT2", unitDeg, "", &fitsStatus);
    
+   isMsContinuous(msHeader.chanFreq, msHeader.chanPerSPW);
    fits_write_key(out, TSTRING, "CTYPE3", ctype3, "Central Frequency",
                   &fitsStatus);
    fits_write_key(out, TDOUBLE, "CRVAL3", &(msHeader.chanFreq[0]), 
