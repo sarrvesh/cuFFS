@@ -23,7 +23,10 @@ sarrvesh.ss@gmail.com
 #ifndef CPU_FILEACCESS_H
 #define CPU_FILEACCESS_H
 
-struct optionsList parseInput(char *parsetFileName);
+#include "fitsio.h"
+
+#define CTYPE_LEN 10
+#define CUBE_DIM 3
 
 /* Structure to store the input options */
 struct optionsList {
@@ -38,4 +41,37 @@ struct optionsList {
    int nThreads;
 };
 
+/* Structure to store all information related to RM Synthesis */
+struct parList {
+    fitsfile *qFile, *uFile;
+    fitsfile *qDirty, *uDirty, *pDirty;
+
+    FILE *freq;
+
+    int qAxisNum, uAxisNum;
+    int qAxisLen1, qAxisLen2, qAxisLen3;
+    int uAxisLen1, uAxisLen2, uAxisLen3;
+    float crval1, crval2, crval3;
+    float crpix1, crpix2, crpix3;
+    float cdelt1, cdelt2, cdelt3;
+    char ctype1[CTYPE_LEN], ctype2[CTYPE_LEN], ctype3[CTYPE_LEN];
+
+    float *freqList;
+    float *lambda2;
+    float lambda20;
+
+    float *phiAxis;
+    float *rmsf, *rmsfReal, *rmsfImag;
+    float K;
+};
+
+struct optionsList parseInput(char *parsetFileName);
+void checkInputFiles(struct optionsList *inOptions, struct parList *params);
+int getFitsHeader(struct optionsList *inOptions, struct parList *params);
+void checkFitsError(int status);
+void makeOutputFitsImages(struct optionsList *inOptions, struct parList *params);
+void writeOutputToDisk(struct optionsList *inOptions, struct parList *params, 
+                       float *mmappedQ, float *mmappedU, float *mmappedP);
+void printOptions(struct optionsList inOptions, struct parList params);
+int getFreqList(struct optionsList *inOptions, struct parList *params);
 #endif
