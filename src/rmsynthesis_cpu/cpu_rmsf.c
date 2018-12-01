@@ -22,6 +22,7 @@ sarrvesh.ss@gmail.com
 ******************************************************************************/
 
 #include "cpu_fileaccess.h"
+#include<gsl/gsl_sf_bessel.h>
 #include<math.h>
 
 /*************************************************************
@@ -31,6 +32,7 @@ sarrvesh.ss@gmail.com
 *************************************************************/
 int generateRMSF(struct optionsList *inOptions, struct parList *params) {
     int i, j;
+    float doubleStartPhi;
     
     params->rmsf     = calloc(inOptions->nPhi, sizeof(params->rmsf));
     params->rmsfReal = calloc(inOptions->nPhi, sizeof(params->rmsfReal));
@@ -60,6 +62,46 @@ int generateRMSF(struct optionsList *inOptions, struct parList *params) {
         params->rmsfImag[i] *= params->K;
         params->rmsf[i] = sqrt( params->rmsfReal[i] * params->rmsfReal[i] +
                                 params->rmsfImag[i] * params->rmsfImag[i] );
+    }
+    
+    if(inOptions->doRMClean) {
+      /* TODO: Create rmsf in the double mode 
+         Define new variables params->rmsfDouble, params->resfRealDouble, 
+         params->rmsfImagDouble, and params->phiAxisDouble */
+      params->phiAxisDouble = calloc(2*inOptions->nPhi, 
+                                   sizeof(params->phiAxisDouble));
+      params->rmsfRealDouble = calloc(2*inOptions->nPhi, 
+                                   sizeof(params->rmsfRealDouble));
+      params->rmsfImagDouble = calloc(2*inOptions->nPhi,
+                                   sizeof(params->rmsfImagDouble));
+      params->rmsfDouble     = calloc(2*inOptions->nPhi,
+                                   sizeof(params->rmsfDouble));
+      if((params->phiAxisDouble  == NULL) ||
+         (params->rmsfRealDouble == NULL) ||
+         (params->rmsfImagDouble == NULL) ||
+         (params->rmsfDouble     == NULL)) { return 1; }
+      doubleStartPhi = inOptions->phiMin - (inOptions->nPhi * inOptions->dPhi)/2;
+      for(i=0; i<2*inOptions->nPhi; i++) {
+         params->phiAxisDouble[i] = doubleStartPhi + i * inOptions->dPhi;
+         /* For each phi value, compute the corresponding RMSF */
+         for(j=0; j<params->qAxisLen3; j++) {
+            params->rmsfRealDouble[i] += cos(2*params->phiAxisDouble[i] * 
+                                       (params->lambda2[j] - params->lambda20));
+            params->rmsfImagDouble[i] -= sin(2*params->phiAxisDouble[i] *
+                                       (params->lambda2[j] - params->lambda20));
+         }
+         // Normalize with K
+         params->rmsfRealDouble[i] *= params->K;
+         params->rmsfImagDouble[i] *= params->K;
+         params->rmsfDouble[i] = sqrt(
+                         params->rmsfRealDouble[i] * params->rmsfRealDouble[i] +
+                         params->rmsfImagDouble[i] * params->rmsfImagDouble[i]);
+      }
+    
+      /* TODO: Fit a Gaussian to rmsfReal, rmsfImage, and rmsf 
+          Define new variables params->rmsfDoubleFit, 
+          params->rmsfRealDoubleFit, and params->rmsfImagDoubleFit */
+    
     }
     return 0;
 }

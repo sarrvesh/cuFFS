@@ -42,7 +42,6 @@ struct optionsList parseInput(char *parsetFileName) {
    config_t cfg;
    struct optionsList inOptions;
    const char *str;
-   char *tempStr;
    
    /* Initialize configurations */
    config_init(&cfg);
@@ -139,6 +138,26 @@ struct optionsList parseInput(char *parsetFileName) {
         printf("Error: 'uCubeName' undefined in parset\n\n");
         config_destroy(&cfg);
         exit(1);
+    }
+    
+    /* Get all RM Clean related parameters */
+    if(! config_lookup_bool(&cfg, "doRMClean", &inOptions.doRMClean)) {
+       printf("WARN: 'doRMClean' undefined in parset.\n");
+       printf("INFO: Will not apply RM CLEAN.");
+    }
+    else {
+       /* Read nIter and threshold from the parset */
+       if(! config_lookup_int(&cfg, "nIter", &inOptions.nIter)) {
+          printf("WARN: 'nIter' undefined in parset. Defaulting to 0\n");
+          inOptions.nIter = 0;
+       }
+       if(! config_lookup_float(&cfg, "threshold", &inOptions.threshold)) {
+          printf("WARN: 'threshold' undefined in parset. Defaulting to 0\n");
+          inOptions.threshold = 0;
+       }
+    }
+    if(inOptions.doRMClean) {
+       printf("WARN: Support for RM CLEAN is yet to be implemented.\n");
     }
     
     config_destroy(&cfg);
@@ -247,8 +266,47 @@ int getFitsHeader(struct optionsList *inOptions, struct parList *params) {
 *
 *************************************************************/
 void writeOutputToDisk(struct optionsList *inOptions, struct parList *params, 
-                       float *mmappedQ, float *mmappedU, float *mmappedP) {
+                       float *array, long nOutElements, char filenamefull[]) {
+   int stat = 0;
+   char fComment[] = "  ";
+   fitsfile *file;
+   long naxis[CUBE_DIM];
+   int tempVar = 1;
+   long fPixel[CUBE_DIM];
    
+   /* Create the output fits file */
+   fits_create_file(&file, filenamefull, &stat);
+   checkFitsError(stat);
+   
+   /* What are the output cube sizes? */
+   naxis[0] = params->qAxisLen1;
+   naxis[1] = params->qAxisLen2;
+   naxis[2] = inOptions->nPhi;
+   
+   /* Create the fits header */
+   fits_create_img(file, FLOAT_IMG, CUBE_DIM, naxis, &stat);
+   checkFitsError(stat);
+   
+   /* Set the relevant fits keys */
+   fits_write_key(file, TSTRING, "BUNIT", "JY/BEAM", fComment, &stat);
+   fits_write_key(file, TDOUBLE, "CRVAL1", &params->crval1, fComment, &stat);
+   fits_write_key(file, TDOUBLE, "CDELT1", &params->cdelt1, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRPIX1", &params->crpix1, fComment, &stat);
+   fits_write_key(file, TSTRING, "CTYPE1", &params->ctype1, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
+   fits_write_key(file, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRVAL3", &inOptions->phiMin, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CDELT3", &inOptions->dPhi, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRPIX3", &tempVar, fComment, &stat);
+   fits_write_key(file, TSTRING, "CTYPE3", "PHI", fComment, &stat);
+   
+   /* Write array to data */
+   fPixel[0] = fPixel[1] = fPixel[2] = 1;
+   fits_write_pix(file, TFLOAT, fPixel, nOutElements, array, &stat);
+   fits_close_file(file, &stat);
+   checkFitsError(stat);
 }
 
 /*************************************************************
@@ -339,5 +397,31 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
     params->lambda20 = tempArray[params->qAxisLen3/2];
     free(tempArray);
     
+    /* Close the frequency file */
+    fclose(params->freq);
+    
     return 0;   
+}
+
+/*************************************************************
+*
+* Free all alloced pointers in parList and optionsList
+*
+*************************************************************/
+void freeStructures(struct optionsList *inOptions, struct parList *params) {
+   free(inOptions->outPrefix); 
+   free(inOptions->freqFileName);
+   free(inOptions->qCubeName); 
+   free(inOptions->uCubeName);
+   
+   free(params->freqList);
+   free(params->lambda2);
+   free(params->rmsf); 
+   free(params->rmsfReal); 
+   free(params->rmsfImag);
+   free(params->phiAxis); 
+   free(params->phiAxisDouble);
+   free(params->rmsfDouble); 
+   free(params->rmsfRealDouble); 
+   free(params->rmsfImagDouble);
 }

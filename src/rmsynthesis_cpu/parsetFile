@@ -1,0 +1,21 @@
+// How many threads to use?
+nThreads = 1;
+
+// Define how fits files are stored on disk
+qCubeName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/cube-Q.fits";
+uCubeName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/cube-U.fits";
+freqFileName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/freqTable";
+
+// Define the faraday depth axis. All units in rad/m/m
+phiMin = -250.;
+nPhi = 1; // integer
+dPhi = 1.0;
+
+// Specify RM-CLEAN parameters
+// RM-CLEAN is not yet implemented
+doRMClean = True; // Can be true of false
+nIter = 1; // integer
+threshold = 1.; // In Jy
+
+// Prefix for output filenames
+outPrefix = "trial1";
