@@ -271,7 +271,7 @@ void writeOutputToDisk(struct optionsList *inOptions, struct parList *params,
    char fComment[] = "  ";
    fitsfile *file;
    long naxis[CUBE_DIM];
-   int tempVar = 1;
+   float tempVar = 1.;
    long fPixel[CUBE_DIM];
    
    /* Create the output fits file */
@@ -289,16 +289,16 @@ void writeOutputToDisk(struct optionsList *inOptions, struct parList *params,
    
    /* Set the relevant fits keys */
    fits_write_key(file, TSTRING, "BUNIT", "JY/BEAM", fComment, &stat);
-   fits_write_key(file, TDOUBLE, "CRVAL1", &params->crval1, fComment, &stat);
-   fits_write_key(file, TDOUBLE, "CDELT1", &params->cdelt1, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CRVAL1", &params->crval1, fComment, &stat);
+   fits_write_key(file, TFLOAT, "CDELT1", &params->cdelt1, fComment, &stat);
    fits_write_key(file, TFLOAT, "CRPIX1", &params->crpix1, fComment, &stat);
    fits_write_key(file, TSTRING, "CTYPE1", &params->ctype1, fComment, &stat);
    fits_write_key(file, TFLOAT, "CRVAL2", &params->crval2, fComment, &stat);
    fits_write_key(file, TFLOAT, "CDELT2", &params->cdelt2, fComment, &stat);
    fits_write_key(file, TFLOAT, "CRPIX2", &params->crpix2, fComment, &stat);
    fits_write_key(file, TSTRING, "CTYPE2", params->ctype2, fComment, &stat);
-   fits_write_key(file, TFLOAT, "CRVAL3", &inOptions->phiMin, fComment, &stat);
-   fits_write_key(file, TFLOAT, "CDELT3", &inOptions->dPhi, fComment, &stat);
+   fits_write_key(file, TDOUBLE, "CRVAL3", &inOptions->phiMin, fComment, &stat);
+   fits_write_key(file, TDOUBLE, "CDELT3", &inOptions->dPhi, fComment, &stat);
    fits_write_key(file, TFLOAT, "CRPIX3", &tempVar, fComment, &stat);
    fits_write_key(file, TSTRING, "CTYPE3", "PHI", fComment, &stat);
    
@@ -360,6 +360,7 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
    int i;
    float tempFloat;
    double *tempArray;
+   int retValue;
    
    params->freqList = calloc(params->qAxisLen3, sizeof(params->freqList));
     if(params->freqList == NULL) {
@@ -367,10 +368,14 @@ int getFreqList(struct optionsList *inOptions, struct parList *params) {
         return 1;
     }
     for(i=0; i<params->qAxisLen3; i++) {
-        fscanf(params->freq, "%f", &params->freqList[i]);
+        retValue = fscanf(params->freq, "%f", &params->freqList[i]);
         if(feof(params->freq)) {
-            printf("Error: Frequency values and fits frames don't match\n");
+            printf("Error: Frequency values and fits frames don't match\n\n");
             return 1;
+        }
+        if(retValue <= 0) {
+           printf("ERROR: Unable to read from frequency file\n\n");
+           return 1;
         }
     }
     fscanf(params->freq, "%f", &tempFloat);

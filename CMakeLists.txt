@@ -4,8 +4,8 @@ project(cuFFS)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMakeModules)
 
 # Enable optimization
-#LIST(APPEND CMAKE_C_FLAGS "-O3 -march=native -Wall -fopenmp")
-LIST(APPEND CMAKE_C_FLAGS "-std=c11 -ggdb3 -march=native -Wall -fopenmp")
+LIST(APPEND CMAKE_C_FLAGS "-std=c11 -O3 -march=native -Wall -fopenmp")
+#LIST(APPEND CMAKE_C_FLAGS "-std=c11 -ggdb3 -march=native -Wall -fopenmp")
 
 ###################################
 #

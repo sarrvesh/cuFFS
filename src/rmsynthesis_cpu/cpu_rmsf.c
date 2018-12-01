@@ -22,7 +22,7 @@ sarrvesh.ss@gmail.com
 ******************************************************************************/
 
 #include "cpu_fileaccess.h"
-#include<gsl/gsl_sf_bessel.h>
+#include<omp.h>
 #include<math.h>
 
 /*************************************************************
@@ -81,7 +81,7 @@ int generateRMSF(struct optionsList *inOptions, struct parList *params) {
          (params->rmsfImagDouble == NULL) ||
          (params->rmsfDouble     == NULL)) { return 1; }
       doubleStartPhi = inOptions->phiMin - (inOptions->nPhi * inOptions->dPhi)/2;
-      for(i=0; i<2*inOptions->nPhi; i++) {
+      for(i=0; i<2*inOptions->nPhi; i++) {         
          params->phiAxisDouble[i] = doubleStartPhi + i * inOptions->dPhi;
          /* For each phi value, compute the corresponding RMSF */
          for(j=0; j<params->qAxisLen3; j++) {

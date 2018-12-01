@@ -36,13 +36,12 @@ sarrvesh.ss@gmail.com
 #include "cpu_rmsf.h"
 
 #define NUM_INPUTS 2
-#define OUT_IN_MMAP 1
 #define MMAP_Q "./.MMAP_Q"
 #define MMAP_U "./.MMAP_Q"
 #define MMAP_P "./.MMAP_Q"
-#define Q_DIRTY "q_dirty_cube.fits"
-#define U_DIRTY "u_dirty_cube.fits"
-#define P_DIRTY "p_dirty_cube.fits"
+#define Q_DIRTY "q_dirty_cube"
+#define U_DIRTY "u_dirty_cube"
+#define P_DIRTY "p_dirty_cube"
 
 /*************************************************************
 *
@@ -61,18 +60,10 @@ void zeroInitialize(float array[], long nElements) {
 *************************************************************/
 void multiplyByConstant(float array[], float K, 
                         long nOutElements, int nThreads) {
-   long elementsPerThread = 1 + nOutElements/nThreads;
-   #pragma omp parallel num_threads(nThreads)
-   {
-      long i, myIdx;
-      long threadOffset;
-      threadOffset = omp_get_thread_num()*elementsPerThread;
-      for(i=0; i<elementsPerThread; i++) {
-         myIdx = threadOffset + i;
-         if(myIdx >= nOutElements) { continue; }
-         array[myIdx] *= K;
-      }
-   }
+
+   int i;
+   #pragma omp parallel for num_threads(nThreads)
+   for(i=0; i<nOutElements; i++) { array[i] *= K; }
 }
 
 /*************************************************************
@@ -82,18 +73,11 @@ void multiplyByConstant(float array[], float K,
 *************************************************************/
 void formPFromQU(float mmappedQ[], float mmappedU[], float mmappedP[], 
                  long nOutElements, int nThreads) {
-   long elementsPerThread = 1 + nOutElements/nThreads;
-   #pragma omp parallel num_threads(nThreads)
-   {
-      long i, myIdx;
-      long threadOffset;
-      threadOffset = omp_get_thread_num()*elementsPerThread;
-      for(i=0; i<elementsPerThread; i++) {
-         myIdx = threadOffset + i;
-         if(myIdx >= nOutElements) { continue; }
-         mmappedP[myIdx] = sqrt(mmappedQ[myIdx]*mmappedQ[myIdx] +
-                                mmappedU[myIdx]*mmappedU[myIdx]);
-      }
+   long k;
+   #pragma omp parallel for num_threads(nThreads)
+   for(k=0; k<nOutElements; k++) {
+      mmappedP[k] = sqrt(mmappedQ[k]*mmappedQ[k] +
+                         mmappedU[k]*mmappedU[k]);
    }
 }
 
@@ -115,7 +99,6 @@ int main(int argc, char *argv[]) {
    off_t writeStatQ, writeStatU, writeStatP;
    float *mmappedQ, *mmappedU, *mmappedP;
    size_t sizeOfOutCube;
-   int useMMAP = 0;
    
    /* Variables for FITS input */
    int fitsStatus;
@@ -125,7 +108,6 @@ int main(int argc, char *argv[]) {
    
    /* Variables for RM synthesis */
    float *lambdaDiff2;
-   int nPlanesPerThread;
    
    printf("\n");
    printf("RM synthesis v%s (CPU version)\n", VERSION_STR);
@@ -161,59 +143,49 @@ int main(int argc, char *argv[]) {
    printf("INFO: Allocating memory for output cubes.\n");
    nOutElements = params.qAxisLen1 * params.qAxisLen2 * inOptions.nPhi;
    sizeOfOutCube = nOutElements * sizeof(float);
-   printf("      Size of an output cube is %0.2f Gbytes\n", 
-               (float)sizeOfOutCube/(1024*1024*1024));
-   mmappedQ = calloc(nOutElements, sizeof(float));
-   mmappedU = calloc(nOutElements, sizeof(float));
-   mmappedP = calloc(nOutElements, sizeof(float));
-   if( (mmappedQ==NULL) || (mmappedU==NULL) || (mmappedP==NULL) ) { 
-      useMMAP = OUT_IN_MMAP;
-      printf("      Unable to hold output cubes in memory.\n");
-      printf("      Trying to create memory maps.\n");
-      /* Try to create memory maps for the output cubes */
-      /* Based on code found on this web page: */
-      /* https://www.linuxquestions.org/questions/programming-9/mmap-tutorial-c-c-511265/ */
-      fDescQ = open(MMAP_Q,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-      fDescU = open(MMAP_U,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-      fDescP = open(MMAP_P,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-      if( (fDescQ<0) || (fDescU<0) || (fDescP<0) ) {
-         printf("ERROR: Unable to create a temp file.\n\n");
-         return 1;
-      }
-      // Stretch the file size to match the size of the mmap
-      // Code will segfault without stretch and writing the last byte 
-      seekStatQ = seekStatU = seekStatP = 0;
-      seekStatQ = lseek(fDescQ, sizeOfOutCube-1, SEEK_SET);
-      seekStatU = lseek(fDescU, sizeOfOutCube-1, SEEK_SET);
-      seekStatP = lseek(fDescP, sizeOfOutCube-1, SEEK_SET);
-      if( (seekStatQ<0) || (seekStatU<0) || (seekStatP<0) ) {
-         close(fDescQ); close(fDescU); close(fDescP);
-         printf("ERROR: Unable to stretch temp files.\n");
-         printf("Please contact Sarrvesh if you see this.\n\n");
-         return 1;
-      }
-      // Write a single character to the end of the stretched file 
-      writeStatQ = writeStatU = writeStatP = 0;
-      writeStatQ = write(fDescQ, "", 1);
-      writeStatU = write(fDescU, "", 1);
-      writeStatP = write(fDescP, "", 1);
-      if( (writeStatQ<0) || (writeStatU<0) || (writeStatP<0) ) {
-         close(fDescQ); close(fDescU); close(fDescP);
-         printf("ERROR: Unable to write to the temp files.\n");
-         printf("Please contact Sarrvesh if you see this.\n\n");
-         return 1;
-      }
-      // Finally, map the file to memory
-      mmappedQ = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
-                        MAP_SHARED, fDescQ, 0);
-      mmappedU = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
-                        MAP_SHARED, fDescU, 0);
-      mmappedP = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
-                        MAP_SHARED, fDescP, 0);
-      // Initialize mmappedQ, mmappedU, and to zero
-      zeroInitialize(mmappedQ, nOutElements);
-      zeroInitialize(mmappedU, nOutElements);
+   /* Try to create memory maps for the output cubes */
+   /* Based on code found on this web page: */
+   /* https://www.linuxquestions.org/questions/programming-9/mmap-tutorial-c-c-511265/ */
+   fDescQ = open(MMAP_Q,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+   fDescU = open(MMAP_U,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+   fDescP = open(MMAP_P,  O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+   if( (fDescQ<0) || (fDescU<0) || (fDescP<0) ) {
+      printf("ERROR: Unable to create a temp file.\n\n");
+      return 1;
    }
+   // Stretch the file size to match the size of the mmap
+   // Code will segfault without stretch and writing the last byte 
+   seekStatQ = seekStatU = seekStatP = 0;
+   seekStatQ = lseek(fDescQ, sizeOfOutCube-1, SEEK_SET);
+   seekStatU = lseek(fDescU, sizeOfOutCube-1, SEEK_SET);
+   seekStatP = lseek(fDescP, sizeOfOutCube-1, SEEK_SET);
+   if( (seekStatQ<0) || (seekStatU<0) || (seekStatP<0) ) {
+      close(fDescQ); close(fDescU); close(fDescP);
+      printf("ERROR: Unable to stretch temp files.\n");
+      printf("Please contact Sarrvesh if you see this.\n\n");
+      return 1;
+   }
+   // Write a single character to the end of the stretched file 
+   writeStatQ = writeStatU = writeStatP = 0;
+   writeStatQ = write(fDescQ, "", 1);
+   writeStatU = write(fDescU, "", 1);
+   writeStatP = write(fDescP, "", 1);
+   if( (writeStatQ<0) || (writeStatU<0) || (writeStatP<0) ) {
+      close(fDescQ); close(fDescU); close(fDescP);
+      printf("ERROR: Unable to write to the temp files.\n");
+      printf("Please contact Sarrvesh if you see this.\n\n");
+      return 1;
+   }
+   // Finally, map the file to memory
+   mmappedQ = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
+                     MAP_SHARED, fDescQ, 0);
+   mmappedU = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
+                     MAP_SHARED, fDescU, 0);
+   mmappedP = mmap(NULL, sizeOfOutCube, PROT_READ | PROT_WRITE, 
+                     MAP_SHARED, fDescP, 0);
+   // Initialize mmappedQ, mmappedU, and to zero
+   zeroInitialize(mmappedQ, nOutElements);
+   zeroInitialize(mmappedU, nOutElements);
    
    /* Print some useful information */
    printOptions(inOptions, params);
@@ -247,15 +219,6 @@ int main(int argc, char *argv[]) {
    // Compute lambdaDiff2
    for(i=0; i<params.qAxisLen1; i++) 
       lambdaDiff2[i] = 2.0*(params.lambda2[i]-params.lambda20);
-   // Estimate how many Faraday depth planes each OpenMP thread will process
-   if(inOptions.nPhi <= inOptions.nThreads) {
-      nPlanesPerThread = 1;
-      inOptions.nThreads = inOptions.nPhi;
-   }
-   else {
-      nPlanesPerThread = (1 + inOptions.nPhi)/inOptions.nThreads;
-   }
-   printf("nPlanesPerThread = %d\n", nPlanesPerThread);
    // Process each frame individually
    fPixel[0] = fPixel[1] = 1;
    for(k=1; k<=params.qAxisLen3; k++) {
@@ -263,36 +226,27 @@ int main(int argc, char *argv[]) {
       fPixel[2] = k;
       fits_read_pix(params.qFile, TFLOAT, fPixel, nInElements, NULL,
                     qImageArray, NULL, &fitsStatus);
+      fits_read_pix(params.uFile, TFLOAT, fPixel, nInElements, NULL,
+                    uImageArray, NULL, &fitsStatus);
       checkFitsError(fitsStatus);
       // Spawn threads to compute output Q(\phi) and U(\phi)
-      #pragma omp parallel num_threads(inOptions.nThreads)
-      {
-         // Each thread will work on nPlansPerThread from 
-         // threadID*nPlansPerThread 
-         // to threadID*nPlanesPerThread + nPlanesPerThread (exclusive)
-         int threadID = omp_get_thread_num();
-         int startOutPlaneIdx = threadID*nPlanesPerThread;
-         int endOutPlaneIdx = startOutPlaneIdx + nPlanesPerThread;
-         float angle;
-         int planeIdx, rowIdx, colIdx, outIdx, inIdx;
-         for(planeIdx=startOutPlaneIdx; planeIdx<endOutPlaneIdx; planeIdx++) {
-            if(planeIdx >= inOptions.nPhi) { continue; }
-            for(rowIdx=0; rowIdx<params.qAxisLen1; rowIdx++) {
-               for(colIdx=0; colIdx<params.qAxisLen2; colIdx++) {
-                  // Do the computation for this output pixel.
-                  outIdx = (planeIdx*params.qAxisLen1*params.qAxisLen2) + 
-                           (rowIdx*params.qAxisLen1) + colIdx;
-                  inIdx  = (rowIdx*params.qAxisLen1) + colIdx;
-                  angle = params.phiAxis[planeIdx] * lambdaDiff2[k];
-                  mmappedQ[outIdx] += qImageArray[inIdx]*cos(angle) +
-                                      uImageArray[inIdx]*sin(angle);
-                  mmappedU[outIdx] += uImageArray[inIdx]*cos(angle) -
-                                      qImageArray[inIdx]*sin(angle);
-               }
+      #pragma omp parallel for num_threads(inOptions.nThreads)
+      for(int planeIdx = 0; planeIdx<inOptions.nPhi; planeIdx++) {
+         int rowIdx, colIdx, outIdx, inIdx;
+         float angle = params.phiAxis[planeIdx] * lambdaDiff2[k];
+         float cos_angle = cos(angle);
+         float sin_angle = sin(angle);
+         for(rowIdx=0; rowIdx<params.qAxisLen1; rowIdx++) {
+            for(colIdx=0; colIdx<params.qAxisLen2; colIdx++) {
+               inIdx  = (rowIdx*params.qAxisLen1) + colIdx;
+               outIdx = (planeIdx*params.qAxisLen1*params.qAxisLen2) + inIdx;
+               mmappedQ[outIdx] += qImageArray[inIdx]*cos_angle +
+                                      uImageArray[inIdx]*sin_angle;
+               mmappedU[outIdx] += uImageArray[inIdx]*cos_angle -
+                                      qImageArray[inIdx]*sin_angle;
             }
          }
-      }
-      break;
+      } // End of pragma
    }
    // Q(\phi) and U(\phi) still need to be scaled by K
    multiplyByConstant(mmappedQ, params.K, nOutElements, inOptions.nThreads);
@@ -302,30 +256,19 @@ int main(int argc, char *argv[]) {
    formPFromQU(mmappedQ, mmappedU, mmappedP, nOutElements, inOptions.nThreads);
    
    /* Transfer the outputs from a memory map to fits cubes */
+   printf("INFO: Writing dirty cubes to disk\n");
    sprintf(filenamefull, "%s%s.fits", inOptions.outPrefix, Q_DIRTY);
    writeOutputToDisk(&inOptions, &params, mmappedQ, nOutElements, filenamefull);
-   if(useMMAP==OUT_IN_MMAP) { 
-      munmap(mmappedQ, sizeOfOutCube); 
-      close(fDescQ);
-      remove(MMAP_Q);
-   }
-   else { free(mmappedQ); }
+   munmap(mmappedQ, sizeOfOutCube); 
+   close(fDescQ); remove(MMAP_Q);
    sprintf(filenamefull, "%s%s.fits", inOptions.outPrefix, U_DIRTY);
    writeOutputToDisk(&inOptions, &params, mmappedU, nOutElements, filenamefull);
-   if(useMMAP==OUT_IN_MMAP) { 
-      munmap(mmappedU, sizeOfOutCube); 
-      close(fDescU);
-      remove(MMAP_U);
-   }
-   else { free(mmappedU); }
+   munmap(mmappedU, sizeOfOutCube); 
+   close(fDescU); remove(MMAP_U);
    sprintf(filenamefull, "%s%s.fits", inOptions.outPrefix, P_DIRTY);
    writeOutputToDisk(&inOptions, &params, mmappedP, nOutElements, filenamefull);
-   if(useMMAP==OUT_IN_MMAP) { 
-      munmap(mmappedP, sizeOfOutCube); 
-      close(fDescP);
-      remove(MMAP_P);
-   }
-   else { free(mmappedP); }
+   munmap(mmappedP, sizeOfOutCube); 
+   close(fDescP); remove(MMAP_P);
    
    /* Free up all allocated memory */
    freeStructures(&inOptions, &params);

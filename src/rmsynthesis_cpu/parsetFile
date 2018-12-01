@@ -1,5 +1,5 @@
 // How many threads to use?
-nThreads = 1;
+nThreads = 4;
 
 // Define how fits files are stored on disk
 qCubeName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/cube-Q.fits";
@@ -8,7 +8,7 @@ freqFileName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/freqTable";
 
 // Define the faraday depth axis. All units in rad/m/m
 phiMin = -250.;
-nPhi = 1; // integer
+nPhi = 401; // integer
 dPhi = 1.0;
 
 // Specify RM-CLEAN parameters
