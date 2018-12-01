@@ -1,14 +1,11 @@
 # CUDA-accelerated Fast Faraday Synthesis (cuFFS)
 
-Code Status
-============
-* Currently being tested using NVidia Tesla P100-SXM2-16GB on the [Bracewell](https://confluence.csiro.au/display/SC/CSIRO+Accelerator+Cluster+-+Bracewell) cluster.
-
 Dependencies
 ============
 * [gcc](https://gcc.gnu.org/)
 * [libconfig](http://www.hyperrealm.com/libconfig/)
 * [cfitsio](http://heasarc.gsfc.nasa.gov/fitsio/fitsio.html)
+* [OpenMP](https://www.openmp.org/)
 * [gnuplot](http://www.gnuplot.info/) (Optional)
 * [nvcc](docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/) (Need both the driver and the toolkit)
 * [hdf5](https://support.hdfgroup.org/HDF5/)
