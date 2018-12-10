@@ -30,10 +30,12 @@ sarrvesh.ss@gmail.com
 #include<unistd.h>
 #include<omp.h>
 #include<math.h>
+#include<stdbool.h>
 
 #include "cpu_version.h"
 #include "cpu_fileaccess.h"
 #include "cpu_rmsf.h"
+#include "cpu_rmclean.h"
 
 #define NUM_INPUTS 2
 #define MMAP_Q "./.MMAP_Q"
@@ -254,6 +256,44 @@ int main(int argc, char *argv[]) {
    
    // Combine Q(\phi) and U(\phi) to form P(\phi)
    formPFromQU(mmappedQ, mmappedU, mmappedP, nOutElements, inOptions.nThreads);
+   
+   /* If requested, do RM-CLEAN */
+   if((inOptions.doRMClean == 1) && (inOptions.nIter > 0)) {
+      #pragma omp parallel for num_threads(inOptions.nThreads)
+      for(int rowIdx=0; rowIdx<params.qAxisLen1; rowIdx++) {
+         float qResidual[inOptions.nPhi], uResidual[inOptions.nPhi], 
+               pResidual[inOptions.nPhi];
+         float qClean[inOptions.nPhi], uClean[inOptions.nPhi], 
+               pClean[inOptions.nPhi];
+         float maxP;
+         int idxMaxP;
+         /* Loop over each line of sight */
+         for(int colIdx=0; colIdx<params.qAxisLen2; colIdx++) {
+            /* Get the Q, U, and P values for this LOS */
+            getLineOfSight(qResidual, mmappedQ, rowIdx, colIdx, 
+                           inOptions.nPhi, params.qAxisLen1, params.qAxisLen2);
+            getLineOfSight(uResidual, mmappedU, rowIdx, colIdx, 
+                           inOptions.nPhi, params.qAxisLen1, params.qAxisLen2);
+            getLineOfSight(pResidual, mmappedP, rowIdx, colIdx, 
+                           inOptions.nPhi, params.qAxisLen1, params.qAxisLen2);
+            
+            /* Do deconvolution */
+            while(true) {
+               /* Initialize the clean arrays to 0 */
+               zeroInitialize(qClean, inOptions.nPhi);
+               zeroInitialize(uClean, inOptions.nPhi);
+               zeroInitialize(pClean, inOptions.nPhi);
+               
+               /* Check if P in this LOS has values greater than threshold */
+               findMaxP(pResidual, inOptions.nPhi, &maxP, &idxMaxP);
+               if(maxP < inOptions.threshold) { break; }
+            }
+            
+            /* Deconvolution has ended. */
+            /* Write the output products for this LoS to cube */
+         }
+      }
+   }
    
    /* Transfer the outputs from a memory map to fits cubes */
    printf("INFO: Writing dirty cubes to disk\n");

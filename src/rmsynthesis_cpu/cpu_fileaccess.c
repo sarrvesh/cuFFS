@@ -155,9 +155,10 @@ struct optionsList parseInput(char *parsetFileName) {
           printf("WARN: 'threshold' undefined in parset. Defaulting to 0\n");
           inOptions.threshold = 0;
        }
-    }
-    if(inOptions.doRMClean) {
-       printf("WARN: Support for RM CLEAN is yet to be implemented.\n");
+       if(! config_lookup_float(&cfg, "gain", &inOptions.gain)) {
+          printf("WARN: 'gain' undefined in parset. Defaulting to 0.1\n");
+          inOptions.gain = 0.1;
+       }
     }
     
     config_destroy(&cfg);

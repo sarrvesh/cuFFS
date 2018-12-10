@@ -41,6 +41,7 @@ struct optionsList {
    int doRMClean;
    int nIter;
    double threshold;
+   double gain;
    
    int nThreads;
 };
