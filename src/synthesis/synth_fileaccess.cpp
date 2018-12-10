@@ -68,7 +68,7 @@ void writeOutputImages(struct optionsList inOptions,
    double cdelt1, cdelt2, cdelt3;
    int crpix1, crpix2, crpix3;
    
-   imageData[1] = 4.;
+   //imageData[1] = 4.;
    
    /* Create the output file */
    fits_create_file(&out, outName, &fitsStatus);

@@ -7,9 +7,9 @@ nGPU = 1;
 fileFormat = "FITS";
 
 // Define how fits files are stored on disk
-qCubeName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/q.rot.fits";
-uCubeName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/u.rot.fits";
-freqFileName = "/home/sarrvesh/Work/RMSynth_GPU/test_wsrt/freqTable";
+qCubeName = "/home/sarrvesh/Work/cuFFS/testFiles/q.rot.fits";
+uCubeName = "/home/sarrvesh/Work/cuFFS/testFiles/u.rot.fits";
+freqFileName = "/home/sarrvesh/Work/cuFFS/testFiles/freqTable";
 
 // Define the faraday depth axis. All units in rad/m/m
 plotRMSF = False;
