@@ -31,6 +31,89 @@ int checkFitsError(int status) {
 
 /*************************************************************
 *
+* Copy fits header from one fits file to another
+*
+*************************************************************/
+int copyFitsHeader(fitsfile *in, fitsfile *out) {
+   int nHeaderKeys = 0;
+   int fitsStatus = 0;
+   char hdrKeyName[256];
+   /* Copy all header keys from in to out */
+   fits_get_hdrspace(in, &nHeaderKeys, NULL, &fitsStatus);
+   for(int i=0; i<nHeaderKeys; i++) {
+      fits_read_record(in, i+1, hdrKeyName, &fitsStatus);
+      /* Ignore this record if it contains keys SIMPLE,
+         BITPIX, NAXIS, NAXIS1, NAXIS2, NAXIS3, and EXTEND */
+      if(strstr(hdrKeyName, "SIMPLE")!=NULL ||
+         strstr(hdrKeyName, "BITPIX")!=NULL ||
+         strstr(hdrKeyName, "NAXIS")!=NULL  ||
+         strstr(hdrKeyName, "NAXIS1")!=NULL ||
+         strstr(hdrKeyName, "NAXIS2")!=NULL ||
+         strstr(hdrKeyName, "NAXIS3")!=NULL ||
+         strstr(hdrKeyName, "EXTEND")!=NULL) {}
+      else {
+         fits_write_record(out, hdrKeyName, &fitsStatus);
+      }
+   }
+   return(checkFitsError(fitsStatus));
+}
+
+/*************************************************************
+*
+* For the specified fits image, swap the first and the third
+*  axes. The keywords to change are 
+*  CRPIX1, CDELT1, CRVAL1, CTYPE1
+*  CRPIX3, CDELT3, CRVAL3, CTYPE3
+*
+*************************************************************/
+int swapHeaderAxisInfo(fitsfile *out) {
+    float crval1, crval3;
+    float crpix1, crpix3;
+    float cdelt1, cdelt3;
+    char ctype1[CTYPE_LEN], ctype3[CTYPE_LEN];
+    int fitsStatus = SUCCESS;
+    char fitsComment[FLEN_COMMENT];
+    
+    /* Read in the fits keys */
+    fits_read_key(out, TFLOAT, "CRVAL1", &crval1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TFLOAT, "CRPIX1", &crpix1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TFLOAT, "CDELT1", &cdelt1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TSTRING, "CTYPE1", ctype1, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TFLOAT, "CRVAL3", &crval3, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TFLOAT, "CRPIX3", &crpix3, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TFLOAT, "CDELT3", &cdelt3, 
+      fitsComment, &fitsStatus);
+    fits_read_key(out, TSTRING, "CTYPE3", ctype3, 
+      fitsComment, &fitsStatus);
+    
+    /* Write the swapped keys to header */
+    fits_update_key(out, TSTRING, "CRVAL1", &crval3, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CRVAL3", &crval1, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CRPIX1", &crpix3, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CRPIX3", &crpix1, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CDELT1", &cdelt3, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CDELT3", &cdelt1, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CTYPE1", ctype3, 
+      fitsComment, &fitsStatus);
+    fits_update_key(out, TSTRING, "CTYPE3", ctype1, 
+      fitsComment, &fitsStatus);
+    return(checkFitsError(fitsStatus));
+}
+
+/*************************************************************
+*
 * Transpose the input FITS image
 *
 *************************************************************/
@@ -45,7 +128,8 @@ int transpose(char *inName, char *outName) {
    int inIdx, outIdx;
    long frameSize, frameOffset, frameAndRowOffset, outRowOffset;
    clock_t start, end;
-   float readTime, rotTime, writeTime, assignTime=0, idxTime = 0;
+   float readTime, rotTime, writeTime;
+   //float assignTime=0, idxTime = 0;
       
    /* Variables for the memory map */
    int fDescIn, fDescOut;
@@ -175,6 +259,10 @@ int transpose(char *inName, char *outName) {
    printf("INFO: Rotation time: %f seconds\n", rotTime);
    //printf("INFO: Index time: %f seconds\n", idxTime);
    //printf("INFO: Assign time: %f seconds\n", assignTime);
+   
+   /* Write the FITS header */
+   copyFitsHeader(in, out);
+   swapHeaderAxisInfo(out);
    
    /* Write the rotated array to disk */
    start = clock();

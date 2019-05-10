@@ -7,6 +7,7 @@
 #define CUBE_DIM 3
 
 #define FLEN_COMMENTS 73
+#define CTYPE_LEN 10
 
 #define VERSION_STR "0.1"
 
