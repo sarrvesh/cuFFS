@@ -20,6 +20,8 @@ Correspondence concerning RMSynth_GPU should be addressed to:
 sarrvesh.ss@gmail.com
 
 ******************************************************************************/
+#include <time.h>
+
 #include "fitsio.h"
 #include "hdf5.h"
 #include "constants.h"
