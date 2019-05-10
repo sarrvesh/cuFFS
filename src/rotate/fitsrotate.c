@@ -20,13 +20,10 @@ int main(int argc, char *argv[]) {
    printf("Written by Sarrvesh S. Sridhar\n");
    
    /* Parse the command line input */
-   if((strcmp(inName, "-h") == 0) || (strcmp(inName, "--help") == 0)){
+   if((argc!=NUM_INPUTS) || 
+      (strcmp(inName, "-h") == 0) || 
+      (strcmp(inName, "--help") == 0)) {
       /* Print help and exit */
-      printf("Usage: %s <input> <output>\n\n", argv[0]);
-      return(SUCCESS);
-   }
-   if(argc!=NUM_INPUTS) {
-      printf("ERROR: Invalid command line input. Terminating execution!\n");
       printf("Usage: %s <input> <output>\n\n", argv[0]);
       return(FAILURE);
    }
